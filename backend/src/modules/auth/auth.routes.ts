@@ -4,8 +4,9 @@ import { authenticate } from '../../middleware/authenticate';
 
 const router = Router();
 
-router.post('/send-otp', authController.sendOtp);
-router.post('/verify-otp', authController.verifyOtp);
+// Customer: single endpoint — creates account if new, logs in if exists
+router.post('/customer', authController.customerAuth);
+
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.get('/me', authenticate, authController.me);

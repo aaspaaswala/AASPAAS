@@ -13,9 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aaspaas.business.core.ui.components.ErrorScreen
+import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.ReservationCardShimmer
+import com.aaspaas.business.core.ui.components.SectionHeader
+import com.aaspaas.business.core.ui.components.ShimmerItem
 import com.aaspaas.business.core.ui.theme.*
 import com.aaspaas.business.domain.model.Reservation
 import com.aaspaas.business.domain.model.ReservationStatus
+import com.aaspaas.business.feature.reservation.viewmodel.BusinessReservationDetailViewModel
 import com.aaspaas.business.feature.reservation.viewmodel.BusinessReservationsViewModel
 
 @Composable
@@ -44,7 +50,9 @@ fun BusinessReservationsScreen(
                 0 -> state.active; 1 -> state.completed; 2 -> state.cancelled; else -> state.expired
             }
             if (state.isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(4) { ReservationCardShimmer() }
+                }
             } else if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No ${tabs[selectedTab].lowercase()} reservations", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -123,8 +131,11 @@ private fun StatusBadge(status: ReservationStatus) {
 }
 
 @Composable
-fun BusinessReservationDetailScreen(reservationId: String, onBack: () -> Unit) {
-    // Detail view — full implementation in next phase; shows reservation ID for now
+fun BusinessReservationDetailScreen(reservationId: String, onBack: () -> Unit, viewModel: BusinessReservationDetailViewModel = hiltViewModel()) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(reservationId) { viewModel.load(reservationId) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -133,8 +144,76 @@ fun BusinessReservationDetailScreen(reservationId: String, onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-            Text("Reservation: $reservationId", style = MaterialTheme.typography.bodyLarge)
+        when {
+            state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.error != null -> Box(Modifier.fillMaxSize().padding(padding).padding(32.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { viewModel.load(reservationId) }) { Text("Retry") }
+                }
+            }
+            state.reservation != null -> ReservationDetailContent(reservation = state.reservation!!, modifier = Modifier.padding(padding))
         }
+    }
+}
+
+@Composable
+private fun ReservationDetailContent(reservation: Reservation, modifier: Modifier = Modifier) {
+    val isActive = reservation.status in listOf(ReservationStatus.ACTIVE, ReservationStatus.CONFIRMED, ReservationStatus.PENDING)
+
+    LazyColumn(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { StatusBadge(reservation.status) }
+        item {
+            Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Reservation", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    Text(reservation.productName, style = MaterialTheme.typography.headlineSmall)
+                    Text(reservation.variantDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text("₹${reservation.price.toInt()}", style = MaterialTheme.typography.headlineMedium, color = BusinessAccent)
+                }
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(1.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoRow("Customer", reservation.customerName)
+                    reservation.customerMobile?.let { InfoRow("Mobile", it) }
+                    InfoRow("Code", reservation.id.takeLast(8).uppercase())
+                    InfoRow("Status", reservation.status.name)
+                    InfoRow("Created", reservation.createdAt.toString().take(10))
+                    reservation.expiresAt?.let { InfoRow("Expires", it.toString().take(10)) }
+                    reservation.completedAt?.let { InfoRow("Completed", it.toString().take(10)) }
+                    reservation.cancelledAt?.let { InfoRow("Cancelled", it.toString().take(10)) }
+                }
+            }
+        }
+        if (isActive) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (reservation.status == ReservationStatus.PENDING) {
+                        OutlinedButton(onClick = { viewModel.confirm(reservation.id) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
+                            Text("Confirm")
+                        }
+                    }
+                    Button(onClick = { viewModel.complete(reservation.id) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Available)) {
+                        Text("Mark Sold")
+                    }
+                    OutlinedButton(onClick = { viewModel.cancel(reservation.id) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(80.dp))
+        Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }

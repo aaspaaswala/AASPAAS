@@ -89,6 +89,15 @@ export async function getReservations(req: AuthRequest, res: Response, next: Nex
   }
 }
 
+export async function getReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const reservation = await businessService.getReservationById(req.auth!.id, req.params.id);
+    sendSuccess(res, reservation);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function confirmReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const reservation = await businessService.confirmReservation(req.auth!.id, req.params.id);

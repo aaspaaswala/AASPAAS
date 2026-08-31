@@ -6,8 +6,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.aaspaas.business.feature.auth.ui.BusinessOtpScreen
-import com.aaspaas.business.feature.auth.ui.BusinessPhoneAuthScreen
+import com.aaspaas.business.feature.auth.ui.BusinessLoginScreen
 import com.aaspaas.business.feature.auth.ui.BusinessRegisterScreen
 import com.aaspaas.business.feature.auth.ui.BusinessSplashScreen
 import com.aaspaas.business.feature.dashboard.ui.DashboardScreen
@@ -34,21 +33,9 @@ fun BusinessNavGraph(
         }
 
         composable(BusinessScreen.AuthPhone.route) {
-            BusinessPhoneAuthScreen(
-                onOtpSent = { mobile -> navController.navigate(BusinessScreen.AuthOtp.createRoute(mobile)) },
+            BusinessLoginScreen(
+                onLoggedIn = { navController.navigate(BusinessScreen.Dashboard.route) { popUpTo(BusinessScreen.AuthPhone.route) { inclusive = true } } },
                 onRegisterClick = { navController.navigate(BusinessScreen.Register.route) }
-            )
-        }
-
-        composable(
-            route = BusinessScreen.AuthOtp.route,
-            arguments = listOf(navArgument("mobile") { type = NavType.StringType })
-        ) { back ->
-            val mobile = back.arguments?.getString("mobile") ?: ""
-            BusinessOtpScreen(
-                mobile = mobile,
-                onVerified = { navController.navigate(BusinessScreen.Dashboard.route) { popUpTo(BusinessScreen.AuthPhone.route) { inclusive = true } } },
-                onBack = { navController.popBackStack() }
             )
         }
 

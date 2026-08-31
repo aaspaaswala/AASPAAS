@@ -5,8 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface BusinessAuthRepository {
     val currentRetailer: Flow<Retailer?>
-    suspend fun sendOtp(mobile: String): Result<Unit>
-    suspend fun verifyOtp(mobile: String, otp: String): Result<Retailer>
+    suspend fun login(mobile: String): Result<Retailer>
     suspend fun registerBusiness(request: RegisterBusinessRequest): Result<Retailer>
     suspend fun logout()
     suspend fun isLoggedIn(): Boolean
@@ -39,6 +38,7 @@ interface ProductManagementRepository {
 
 interface BusinessReservationRepository {
     fun getReservations(): Flow<List<Reservation>>
+    suspend fun getReservationById(reservationId: String): Result<Reservation>
     suspend fun confirmReservation(reservationId: String): Result<Unit>
     suspend fun completeReservation(reservationId: String): Result<Unit>
     suspend fun cancelReservation(reservationId: String): Result<Unit>

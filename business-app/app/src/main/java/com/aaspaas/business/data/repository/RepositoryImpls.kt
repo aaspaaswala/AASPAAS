@@ -28,23 +28,18 @@ class BusinessAuthRepositoryImpl @Inject constructor(
     private val _currentRetailer = MutableStateFlow<Retailer?>(null)
     override val currentRetailer: Flow<Retailer?> = _currentRetailer.asStateFlow()
 
-    override suspend fun sendOtp(mobile: String): Result<Unit> {
-        if (BuildConfig.USE_MOCK_AUTH) return Result.success(Unit)
-        return safeApiCall { api.sendOtp(SendOtpRequest(mobile)) }.toResult().map { }
-    }
-
-    override suspend fun verifyOtp(mobile: String, otp: String): Result<Retailer> {
+    override suspend fun login(mobile: String): Result<Retailer> {
         if (BuildConfig.USE_MOCK_AUTH) {
             val mock = Retailer("mock_r_001", "Test Owner", "Test Business", mobile, null, VerificationStatus.PENDING)
             _currentRetailer.value = mock
             tokenProvider.saveToken("mock_business_token")
             return Result.success(mock)
         }
-        return safeApiCall { api.verifyOtp(VerifyOtpRequest(mobile, otp)) }
+        return safeApiCall { api.login(com.aaspaas.business.data.remote.LoginRequest(mobile)) }
             .toResult()
             .mapCatching { response ->
                 val data = response.data ?: error("Empty auth response")
-                tokenProvider.saveToken(data.token)
+                tokenProvider.saveTokens(data.accessToken, data.refreshToken)
                 val retailer = data.retailer.toDomain()
                 _currentRetailer.value = retailer
                 retailer
@@ -63,7 +58,7 @@ class BusinessAuthRepositoryImpl @Inject constructor(
             )
         }.toResult().mapCatching { response ->
             val data = response.data ?: error("Empty register response")
-            tokenProvider.saveToken(data.token)
+            tokenProvider.saveTokens(data.accessToken, data.refreshToken)
             val retailer = data.retailer.toDomain()
             _currentRetailer.value = retailer
             retailer
@@ -140,6 +135,11 @@ class BusinessReservationRepositoryImpl @Inject constructor(
         }
         return _reservations
     }
+
+    override suspend fun getReservationById(reservationId: String): Result<Reservation> =
+        safeApiCall { api.getReservationById(reservationId) }
+            .toResult()
+            .mapCatching { it.data?.toDomain() ?: error("Reservation not found") }
 
     override suspend fun confirmReservation(reservationId: String): Result<Unit> =
         safeApiCall { api.confirmReservation(reservationId) }.toResult().map { }

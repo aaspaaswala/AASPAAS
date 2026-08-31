@@ -10,10 +10,10 @@ interface ReservationApiService {
     suspend fun createReservation(@Body request: CreateReservationRequest): ApiResponse<ReservationDto>
 
     @GET("reservations")
-    suspend fun getMyReservations(): ApiResponse<List<ReservationDto>>
+    suspend fun getMyReservations(): ApiResponse<ReservationsListResponse>
 
     @GET("reservations/{id}")
-    suspend fun getReservationById(@Path("id") id: String): ApiResponse<ReservationDto>
+    suspend fun getReservationById(@Path("id") id: String): ApiResponse<ReservationWrapper>
 
     @POST("reservations/{id}/cancel")
     suspend fun cancelReservation(@Path("id") id: String): ApiResponse<Unit>

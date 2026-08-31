@@ -113,7 +113,8 @@ data class MyReservationsUiState(
     val active: List<Reservation> = emptyList(),
     val completed: List<Reservation> = emptyList(),
     val cancelled: List<Reservation> = emptyList(),
-    val expired: List<Reservation> = emptyList()
+    val expired: List<Reservation> = emptyList(),
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -121,15 +122,24 @@ class MyReservationsViewModel @Inject constructor(
     private val reservationRepository: ReservationRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<MyReservationsUiState> =
-        reservationRepository.getMyReservations()
-            .map { list ->
-                MyReservationsUiState(
-                    active = list.filter { it.status in listOf(ReservationStatus.ACTIVE, ReservationStatus.CONFIRMED, ReservationStatus.PENDING) },
-                    completed = list.filter { it.status == ReservationStatus.COMPLETED },
-                    cancelled = list.filter { it.status == ReservationStatus.CANCELLED },
-                    expired = list.filter { it.status == ReservationStatus.EXPIRED }
-                )
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MyReservationsUiState(isLoading = true))
+    private val _uiState = MutableStateFlow(MyReservationsUiState(isLoading = true))
+    val uiState: StateFlow<MyReservationsUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            reservationRepository.getMyReservations()
+                .collect { list ->
+                    _uiState.value = MyReservationsUiState(
+                        active = list.filter { it.status in listOf(ReservationStatus.ACTIVE, ReservationStatus.CONFIRMED, ReservationStatus.PENDING) },
+                        completed = list.filter { it.status == ReservationStatus.COMPLETED },
+                        cancelled = list.filter { it.status == ReservationStatus.CANCELLED },
+                        expired = list.filter { it.status == ReservationStatus.EXPIRED }
+                    )
+                }
+        }
+        viewModelScope.launch {
+            reservationRepository.fetchMyReservations()
+                .onFailure { _uiState.value = _uiState.value.copy(error = it.message) }
+        }
+    }
 }

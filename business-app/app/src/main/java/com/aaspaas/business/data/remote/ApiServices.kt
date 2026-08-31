@@ -3,11 +3,8 @@ package com.aaspaas.business.data.remote
 import retrofit2.http.*
 
 interface BusinessAuthApiService {
-    @POST("business/auth/send-otp")
-    suspend fun sendOtp(@Body request: SendOtpRequest): ApiResponse<Unit>
-
-    @POST("business/auth/verify-otp")
-    suspend fun verifyOtp(@Body request: VerifyOtpRequest): ApiResponse<AuthResponse>
+    @POST("business/auth/login")
+    suspend fun login(@Body request: LoginRequest): ApiResponse<AuthResponse>
 
     @POST("business/auth/register")
     suspend fun register(@Body request: RegisterBusinessRequest): ApiResponse<AuthResponse>
@@ -41,6 +38,9 @@ interface BusinessProductApiService {
 interface BusinessReservationApiService {
     @GET("business/reservations")
     suspend fun getReservations(): ApiResponse<List<ReservationDto>>
+
+    @GET("business/reservations/{id}")
+    suspend fun getReservationById(@Path("id") id: String): ApiResponse<ReservationDto>
 
     @POST("business/reservations/{id}/confirm")
     suspend fun confirmReservation(@Path("id") id: String): ApiResponse<Unit>

@@ -18,15 +18,29 @@ class DataStoreTokenProvider @Inject constructor(
 ) : TokenProvider {
 
     private val tokenKey = stringPreferencesKey("jwt_token")
+    private val refreshTokenKey = stringPreferencesKey("refresh_token")
 
     override suspend fun getToken(): String? =
         context.tokenDataStore.data.map { it[tokenKey] }.firstOrNull()
+
+    override suspend fun getRefreshToken(): String? =
+        context.tokenDataStore.data.map { it[refreshTokenKey] }.firstOrNull()
 
     override suspend fun saveToken(token: String) {
         context.tokenDataStore.edit { it[tokenKey] = token }
     }
 
+    override suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        context.tokenDataStore.edit {
+            it[tokenKey] = accessToken
+            it[refreshTokenKey] = refreshToken
+        }
+    }
+
     override suspend fun clearToken() {
-        context.tokenDataStore.edit { it.remove(tokenKey) }
+        context.tokenDataStore.edit {
+            it.remove(tokenKey)
+            it.remove(refreshTokenKey)
+        }
     }
 }

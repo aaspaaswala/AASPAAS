@@ -18,7 +18,6 @@ class ReservationRepositoryImpl @Inject constructor(
     private val api: ReservationApiService
 ) : ReservationRepository {
 
-    // In-memory cache; a real implementation would use Room for offline support
     private val _reservations = MutableStateFlow<List<Reservation>>(emptyList())
 
     override suspend fun createReservation(variantId: String): Result<Reservation> =
@@ -38,9 +37,18 @@ class ReservationRepositoryImpl @Inject constructor(
     override suspend fun getReservationById(id: String): Result<Reservation> =
         safeApiCall { api.getReservationById(id) }
             .toResult()
-            .mapCatching { it.data?.toDomain() ?: error("Reservation not found") }
+            .mapCatching { it.data?.reservation?.toDomain() ?: error("Reservation not found") }
 
     override fun getMyReservations(): Flow<List<Reservation>> = _reservations
+
+    override suspend fun fetchMyReservations(): Result<List<Reservation>> =
+        safeApiCall { api.getMyReservations() }
+            .toResult()
+            .mapCatching { response ->
+                val list = response.data?.reservations?.map { it.toDomain() } ?: emptyList()
+                _reservations.value = list
+                list
+            }
 
     override fun getActiveReservations(): Flow<List<Reservation>> =
         _reservations.map { list ->

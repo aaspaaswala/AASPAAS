@@ -17,6 +17,7 @@ router.put('/products/:id', businessController.updateProduct);
 router.delete('/products/:id', businessController.deleteProduct);
 router.put('/inventory/:id', businessController.updateInventory);
 router.get('/reservations', businessController.getReservations);
+router.get('/reservations/:id', businessController.getReservation);
 router.post('/reservations/:id/confirm', businessController.confirmReservation);
 router.post('/reservations/:id/complete', businessController.completeReservation);
 router.post('/reservations/:id/cancel', businessController.cancelReservation);

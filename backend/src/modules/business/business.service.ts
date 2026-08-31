@@ -349,6 +349,16 @@ export async function getReservations(retailerId: string): Promise<object[]> {
   return reservations.map(buildBusinessReservationDto);
 }
 
+export async function getReservationById(retailerId: string, reservationId: string): Promise<object> {
+  const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
+  if (!store) throw new NotFoundError('Store');
+
+  const reservation = await Reservation.findOne({ _id: reservationId, storeId: store._id }).lean();
+  if (!reservation) throw new NotFoundError('Reservation');
+
+  return buildBusinessReservationDto(reservation);
+}
+
 export async function confirmReservation(retailerId: string, reservationId: string): Promise<object> {
   const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
   if (!store) throw new NotFoundError('Store');

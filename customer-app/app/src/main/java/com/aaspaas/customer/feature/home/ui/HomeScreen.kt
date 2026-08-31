@@ -20,7 +20,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaspaas.customer.core.ui.components.ErrorScreen
 import com.aaspaas.customer.core.ui.components.LoadingScreen
+import com.aaspaas.customer.core.ui.components.ProductCardShimmer
 import com.aaspaas.customer.core.ui.components.SectionHeader
+import com.aaspaas.customer.core.ui.components.ShimmerItem
+import com.aaspaas.customer.core.ui.components.StoreCardShimmer
 import com.aaspaas.customer.core.ui.theme.Brand
 import com.aaspaas.customer.core.ui.theme.BrandAccent
 import com.aaspaas.customer.domain.model.Product
@@ -49,7 +52,7 @@ fun HomeScreen(
         }
     ) { padding ->
         when {
-            state.isLoading -> LoadingScreen()
+            state.isLoading -> HomeShimmerScreen(modifier = Modifier.padding(padding))
             state.error != null -> ErrorScreen(state.error!!, onRetry = { viewModel.loadHomeData() })
             else -> HomeContent(
                 state = state,
@@ -59,6 +62,27 @@ fun HomeScreen(
                 modifier = Modifier.padding(padding)
             )
         }
+    }
+}
+
+@Composable
+private fun HomeShimmerScreen(modifier: Modifier = Modifier) {
+    LazyColumn(modifier = modifier.fillMaxSize()) {
+        item {
+            Spacer(Modifier.height(12.dp))
+            ShimmerItem(modifier = Modifier.height(20.dp).fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(8.dp))
+            Spacer(Modifier.height(16.dp))
+            ShimmerItem(modifier = Modifier.height(48.dp).fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(12.dp))
+        }
+        item { SectionHeader("Nearby Products") }
+        item {
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(3) { ProductCardShimmer() }
+            }
+        }
+        item { SectionHeader("Nearby Stores") }
+        items(3) { StoreCardShimmer() }
+        item { Spacer(Modifier.height(80.dp)) }
     }
 }
 

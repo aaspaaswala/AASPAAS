@@ -18,12 +18,12 @@ data class RetailerDto(
 )
 
 data class AuthResponse(
-    @SerializedName("token") val token: String,
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("refreshToken") val refreshToken: String,
     @SerializedName("retailer") val retailer: RetailerDto
 )
 
-data class SendOtpRequest(@SerializedName("mobile") val mobile: String)
-data class VerifyOtpRequest(@SerializedName("mobile") val mobile: String, @SerializedName("otp") val otp: String)
+data class LoginRequest(@SerializedName("mobile") val mobile: String)
 
 data class RegisterBusinessRequest(
     @SerializedName("ownerName") val ownerName: String,

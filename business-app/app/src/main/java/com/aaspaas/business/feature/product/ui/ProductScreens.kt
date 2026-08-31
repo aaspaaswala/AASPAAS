@@ -18,6 +18,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aaspaas.business.core.ui.components.ErrorScreen
+import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.ProductCardShimmer
+import com.aaspaas.business.core.ui.components.SectionHeader
+import com.aaspaas.business.core.ui.components.ShimmerItem
 import com.aaspaas.business.core.ui.theme.*
 import com.aaspaas.business.domain.model.Product
 import com.aaspaas.business.feature.product.viewmodel.AddEditProductViewModel
@@ -50,7 +55,13 @@ fun ProductListScreen(
         }
     ) { padding ->
         when {
-            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.isLoading -> LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(5) { ProductCardShimmer() }
+            }
             state.error != null -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(state.error!!, color = MaterialTheme.colorScheme.error)

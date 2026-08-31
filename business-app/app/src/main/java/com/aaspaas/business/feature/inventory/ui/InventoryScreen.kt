@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaspaas.business.core.ui.theme.*
+import com.aaspaas.business.core.ui.components.ErrorScreen
+import com.aaspaas.business.core.ui.components.InventoryRowShimmer
+import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.ShimmerItem
 import com.aaspaas.business.domain.model.InventoryStatus
 import com.aaspaas.business.domain.model.Product
 import com.aaspaas.business.domain.model.ProductVariant
@@ -38,7 +42,20 @@ fun InventoryScreen(
         }
     ) { padding ->
         when {
-            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.isLoading -> LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(4) {
+                    Column {
+                        ShimmerItem(modifier = Modifier.height(20.dp).fillMaxWidth(), shape = RoundedCornerShape(8.dp))
+                        Spacer(Modifier.height(8.dp))
+                        InventoryRowShimmer()
+                        InventoryRowShimmer()
+                    }
+                }
+            }
             state.error != null -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(state.error!!, color = MaterialTheme.colorScheme.error)

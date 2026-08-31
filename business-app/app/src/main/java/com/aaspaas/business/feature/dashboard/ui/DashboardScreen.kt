@@ -15,6 +15,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aaspaas.business.core.ui.components.ErrorScreen
+import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.SectionHeader
+import com.aaspaas.business.core.ui.components.ShimmerItem
+import com.aaspaas.business.core.ui.components.StatCardShimmer
 import com.aaspaas.business.core.ui.theme.*
 import com.aaspaas.business.domain.model.DashboardStats
 import com.aaspaas.business.feature.dashboard.viewmodel.DashboardViewModel
@@ -55,9 +60,7 @@ fun DashboardScreen(
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp)) {
             when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                state.isLoading -> DashboardShimmerScreen()
                 state.stats != null -> DashboardContent(
                     stats = state.stats!!,
                     onProductsClick = onProductsClick,
@@ -65,7 +68,6 @@ fun DashboardScreen(
                     onReservationsClick = onReservationsClick
                 )
                 else -> {
-                    // Show empty state with quick actions
                     DashboardContent(
                         stats = DashboardStats(0, 0, 0, 0, 0),
                         onProductsClick = onProductsClick,
@@ -75,6 +77,25 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DashboardShimmerScreen() {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(4) { StatCardShimmer() }
+    }
+    Spacer(Modifier.height(24.dp))
+    Text("Quick Actions", style = MaterialTheme.typography.headlineSmall)
+    Spacer(Modifier.height(12.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        ShimmerItem(modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(12.dp))
+        ShimmerItem(modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(12.dp))
     }
 }
 

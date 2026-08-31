@@ -43,23 +43,78 @@ fun ProductDto.toDomain() = Product(
     store = store.toDomain()
 )
 
-fun ReservationDto.toDomain() = Reservation(
-    id = id,
-    product = product.toDomain(),
-    variant = variant.toDomain(),
-    store = store.toDomain(),
-    status = when (status) {
-        "CONFIRMED" -> ReservationStatus.CONFIRMED
-        "ACTIVE" -> ReservationStatus.ACTIVE
-        "COMPLETED" -> ReservationStatus.COMPLETED
-        "CANCELLED" -> ReservationStatus.CANCELLED
-        "EXPIRED" -> ReservationStatus.EXPIRED
-        else -> ReservationStatus.PENDING
-    },
-    createdAt = Instant.parse(createdAt),
-    expiresAt = Instant.parse(expiresAt),
-    completedAt = completedAt?.let { Instant.parse(it) },
-    cancelledAt = cancelledAt?.let { Instant.parse(it) },
-    policy = if (durationHours <= 6) ReservationPolicy.FreeUser
-             else ReservationPolicy.Subscriber(durationHours)
-)
+fun ReservationDto.toDomain(): Reservation {
+    val lat = storeLocation?.coordinates?.getOrNull(1) ?: 0.0
+    val lng = storeLocation?.coordinates?.getOrNull(0) ?: 0.0
+    return Reservation(
+        id = id,
+        product = Product(
+            id = id,
+            name = productName,
+            brand = null,
+            description = null,
+            imageUrls = productImage?.let { listOf(it) } ?: emptyList(),
+            category = "",
+            variants = emptyList(),
+            store = Store(
+                id = id,
+                name = storeName,
+                imageUrl = null,
+                address = storeAddress,
+                latitude = lat,
+                longitude = lng,
+                distanceKm = null,
+                rating = null,
+                reviewCount = 0,
+                openingHours = "",
+                isOpen = true,
+                phone = storePhone,
+                categories = emptyList(),
+                verificationStatus = com.aaspaas.customer.domain.model.VerificationStatus.PENDING
+            )
+        ),
+        variant = ProductVariant(
+            id = id,
+            size = null,
+            color = null,
+            price = price,
+            inventory = Inventory(
+                id = id,
+                totalStock = quantity,
+                availableStock = quantity,
+                reservedStock = 0,
+                status = com.aaspaas.customer.domain.model.InventoryStatus.AVAILABLE
+            )
+        ),
+        store = Store(
+            id = id,
+            name = storeName,
+            imageUrl = null,
+            address = storeAddress,
+            latitude = lat,
+            longitude = lng,
+            distanceKm = null,
+            rating = null,
+            reviewCount = 0,
+            openingHours = "",
+            isOpen = true,
+            phone = storePhone,
+            categories = emptyList(),
+            verificationStatus = com.aaspaas.customer.domain.model.VerificationStatus.PENDING
+        ),
+        status = when (status) {
+            "CONFIRMED" -> ReservationStatus.CONFIRMED
+            "ACTIVE" -> ReservationStatus.ACTIVE
+            "COMPLETED" -> ReservationStatus.COMPLETED
+            "CANCELLED" -> ReservationStatus.CANCELLED
+            "EXPIRED" -> ReservationStatus.EXPIRED
+            else -> ReservationStatus.PENDING
+        },
+        createdAt = Instant.parse(createdAt),
+        expiresAt = Instant.parse(expiresAt),
+        completedAt = completedAt?.let { Instant.parse(it) },
+        cancelledAt = cancelledAt?.let { Instant.parse(it) },
+        policy = if (durationHours <= 6) ReservationPolicy.FreeUser
+                 else ReservationPolicy.Subscriber(durationHours)
+    )
+}

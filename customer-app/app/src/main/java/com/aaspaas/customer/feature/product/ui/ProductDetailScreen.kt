@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaspaas.customer.core.ui.components.ErrorScreen
 import com.aaspaas.customer.core.ui.components.LoadingScreen
+import com.aaspaas.customer.core.ui.components.ShimmerItem
 import com.aaspaas.customer.core.ui.theme.*
 import com.aaspaas.customer.domain.model.InventoryStatus
 import com.aaspaas.customer.domain.model.Product
@@ -39,7 +40,7 @@ fun ProductDetailScreen(
     LaunchedEffect(productId, variantId) { viewModel.load(productId, variantId) }
 
     when {
-        state.isLoading -> LoadingScreen()
+        state.isLoading -> ProductShimmerScreen()
         state.error != null -> ErrorScreen(state.error!!, onRetry = { viewModel.load(productId, variantId) })
         state.product != null -> ProductDetailContent(
             product = state.product!!,
@@ -49,6 +50,34 @@ fun ProductDetailScreen(
             onStoreClick = { onStoreClick(state.product!!.store.id) },
             onBack = onBack
         )
+    }
+}
+
+@Composable
+private fun ProductShimmerScreen() {
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            ShimmerItem(modifier = Modifier.fillMaxWidth().height(280.dp), shape = RoundedCornerShape(0.dp))
+        }
+        item {
+            Column(Modifier.padding(16.dp)) {
+                ShimmerItem(modifier = Modifier.height(20.dp).fillMaxWidth(0.6f))
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(28.dp).fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(24.dp).width(100.dp))
+                Spacer(Modifier.height(16.dp))
+                ShimmerItem(modifier = Modifier.height(28.dp).fillMaxWidth(), shape = RoundedCornerShape(20.dp))
+                Spacer(Modifier.height(16.dp))
+                ShimmerItem(modifier = Modifier.height(16.dp).fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                repeat(2) {
+                    ShimmerItem(modifier = Modifier.height(40.dp).fillMaxWidth(), shape = RoundedCornerShape(8.dp))
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+        item { Spacer(Modifier.height(80.dp)) }
     }
 }
 

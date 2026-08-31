@@ -6,8 +6,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.aaspaas.customer.feature.auth.ui.OtpScreen
-import com.aaspaas.customer.feature.auth.ui.PhoneAuthScreen
+import com.aaspaas.customer.feature.auth.ui.LoginScreen
 import com.aaspaas.customer.feature.home.ui.HomeScreen
 import com.aaspaas.customer.feature.home.ui.OnboardingScreen
 import com.aaspaas.customer.feature.home.ui.SplashScreen
@@ -40,20 +39,8 @@ fun AppNavGraph(
         }
 
         composable(Screen.AuthPhone.route) {
-            PhoneAuthScreen(
-                onOtpSent = { mobile -> navController.navigate(Screen.AuthOtp.createRoute(mobile)) }
-            )
-        }
-
-        composable(
-            route = Screen.AuthOtp.route,
-            arguments = listOf(navArgument("mobile") { type = NavType.StringType })
-        ) { backStack ->
-            val mobile = backStack.arguments?.getString("mobile") ?: ""
-            OtpScreen(
-                mobile = mobile,
-                onVerified = { navController.navigate(Screen.Home.route) { popUpTo(Screen.AuthPhone.route) { inclusive = true } } },
-                onBack = { navController.popBackStack() }
+            LoginScreen(
+                onLoggedIn = { navController.navigate(Screen.Home.route) { popUpTo(Screen.AuthPhone.route) { inclusive = true } } }
             )
         }
 

@@ -288,9 +288,13 @@ fun MyReservationsScreen(
                 else -> state.expired
             }
 
-            if (list.isEmpty()) {
+            if (state.active.isEmpty() && state.completed.isEmpty() && state.cancelled.isEmpty() && state.expired.isEmpty() && !state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No ${tabs[selectedTab].lowercase()} reservations", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    EmptyScreen("No reservations yet", icon = Icons.Default.BookmarkBorder)
+                }
+            } else if (state.isLoading) {
+                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(3) { ReservationCardShimmer() }
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

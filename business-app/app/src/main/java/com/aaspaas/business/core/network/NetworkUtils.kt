@@ -10,7 +10,9 @@ import javax.inject.Provider
 
 interface TokenProvider {
     suspend fun getToken(): String?
+    suspend fun getRefreshToken(): String?
     suspend fun saveToken(token: String)
+    suspend fun saveTokens(accessToken: String, refreshToken: String)
     suspend fun clearToken()
 }
 

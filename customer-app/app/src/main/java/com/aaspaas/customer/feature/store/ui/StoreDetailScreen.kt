@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaspaas.customer.core.ui.components.ErrorScreen
-import com.aaspaas.customer.core.ui.components.LoadingScreen
+import com.aaspaas.customer.core.ui.components.StoreCardShimmer
 import com.aaspaas.customer.core.ui.theme.*
 import com.aaspaas.customer.domain.model.Product
 import com.aaspaas.customer.domain.model.Store
@@ -36,7 +36,7 @@ fun StoreDetailScreen(
     LaunchedEffect(storeId) { viewModel.load(storeId) }
 
     when {
-        state.isLoading -> LoadingScreen()
+        state.isLoading -> StoreShimmerScreen()
         state.error != null -> ErrorScreen(state.error!!, onRetry = { viewModel.load(storeId) })
         state.store != null -> StoreDetailContent(
             store = state.store!!,
@@ -44,6 +44,53 @@ fun StoreDetailScreen(
             onProductClick = onProductClick,
             onBack = onBack
         )
+    }
+}
+
+@Composable
+private fun StoreShimmerScreen() {
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Column(Modifier.padding(16.dp)) {
+                ShimmerItem(modifier = Modifier.height(28.dp).fillMaxWidth(), shape = RoundedCornerShape(8.dp))
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(16.dp).fillMaxWidth(0.8f), shape = RoundedCornerShape(8.dp))
+                Spacer(Modifier.height(4.dp))
+                ShimmerItem(modifier = Modifier.height(16.dp).fillMaxWidth(0.5f), shape = RoundedCornerShape(8.dp))
+                Spacer(Modifier.height(12.dp))
+                ShimmerItem(modifier = Modifier.height(48.dp).fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            }
+            HorizontalDivider()
+        }
+        item { SectionHeader("Products") }
+        items(3) {
+            StoreProductItemShimmer()
+        }
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+private fun StoreProductItemShimmer() {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            ShimmerItem(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(8.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                ShimmerItem(modifier = Modifier.height(18.dp).fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.6f))
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                ShimmerItem(modifier = Modifier.height(18.dp).width(60.dp))
+                Spacer(Modifier.height(4.dp))
+                ShimmerItem(modifier = Modifier.height(12.dp).width(50.dp))
+            }
+        }
     }
 }
 

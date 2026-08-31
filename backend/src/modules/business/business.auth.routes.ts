@@ -3,48 +3,20 @@ import { Retailer } from '../../models/Retailer';
 import { Store } from '../../models/Store';
 import { signAccessToken, signRefreshToken } from '../auth/jwt';
 import { sendSuccess } from '../../utils/response';
-import { ValidationError } from '../../utils/errors';
+import { ValidationError, NotFoundError } from '../../utils/errors';
 import { ROLES } from '../../config/constants';
 import { logger } from '../../utils/logger';
-import { Types } from 'mongoose';
 
 const router = Router();
 
-router.post('/send-otp', async (req: Request, res: Response, next: NextFunction) => {
+// POST /business/auth/login — direct login with phone number
+router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { mobile } = req.body;
     if (!mobile) return next(new ValidationError('mobile is required'));
 
-    const existing = await Retailer.findOne({ phone: mobile });
-    if (!existing) return next(new ValidationError('Retailer account not found'));
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    existing.otp = otp;
-    existing.otpExpiresAt = expiresAt;
-    await existing.save();
-
-    logger.info('Retailer OTP sent', { phone: mobile });
-    sendSuccess(res, null, 'OTP sent successfully');
-  } catch (err) {
-    if ((err as any).name === 'ZodError') return next(new ValidationError((err as Error).message));
-    next(err);
-  }
-});
-
-router.post('/verify-otp', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { mobile, otp } = req.body;
-    if (!mobile || !otp) return next(new ValidationError('mobile and otp are required'));
-
-    const retailer = await Retailer.findOne({ phone: mobile }).select('+otp +otpExpiresAt');
-    if (!retailer) return next(new ValidationError('Retailer not found'));
-    if (!retailer.otp || retailer.otp !== otp) return next(new ValidationError('Invalid OTP'));
-    if (!retailer.otpExpiresAt || retailer.otpExpiresAt < new Date()) return next(new ValidationError('OTP expired'));
-
-    retailer.otp = undefined;
-    retailer.otpExpiresAt = undefined;
-    await retailer.save();
+    const retailer = await Retailer.findOne({ phone: mobile });
+    if (!retailer) return next(new NotFoundError('Retailer account not found. Please register first.'));
 
     const accessToken = signAccessToken(retailer.id, ROLES.RETAILER);
     const refreshToken = signRefreshToken(retailer.id, ROLES.RETAILER);
@@ -58,13 +30,14 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
       verificationStatus: retailer.verificationStatus,
     };
 
-    sendSuccess(res, { accessToken, refreshToken, retailer: retailerData }, 'Authenticated successfully');
+    logger.info('Retailer logged in', { phone: mobile });
+    sendSuccess(res, { accessToken, refreshToken, retailer: retailerData }, 'Logged in successfully');
   } catch (err) {
-    if ((err as any).name === 'ZodError') return next(new ValidationError((err as Error).message));
     next(err);
   }
 });
 
+// POST /business/auth/register — register new business (creates retailer + store)
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { ownerName, businessName, mobile, email, category, address, latitude, longitude, openingHours } = req.body;
@@ -74,7 +47,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     }
 
     const existing = await Retailer.findOne({ phone: mobile });
-    if (existing) return next(new ValidationError('Retailer already exists'));
+    if (existing) return next(new ValidationError('An account with this mobile already exists. Please login.'));
 
     const retailer = await Retailer.create({
       ownerName,
@@ -114,7 +87,6 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     logger.info('Retailer registered', { retailerId: retailer._id });
     sendSuccess(res, { accessToken, refreshToken, retailer: retailerData }, 'Registered successfully', 201);
   } catch (err) {
-    if ((err as any).name === 'ZodError') return next(new ValidationError((err as Error).message));
     next(err);
   }
 });

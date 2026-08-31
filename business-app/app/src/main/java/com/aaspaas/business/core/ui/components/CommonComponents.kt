@@ -1,4 +1,4 @@
-package com.aaspaas.customer.core.ui.components
+package com.aaspaas.business.core.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -98,35 +97,22 @@ fun ShimmerItem(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape
 @Composable
 fun ProductCardShimmer() {
     Card(
-        modifier = Modifier.width(180.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            ShimmerItem(modifier = Modifier.height(120.dp).fillMaxWidth(), shape = RoundedCornerShape(8.dp))
-            Spacer(Modifier.height(8.dp))
-            ShimmerItem(modifier = Modifier.height(16.dp).fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            ShimmerItem(modifier = Modifier.height(14.dp).width(80.dp))
-        }
-    }
-}
-
-@Composable
-fun StoreCardShimmer() {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(1.dp)
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ShimmerItem(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(8.dp))
-            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 ShimmerItem(modifier = Modifier.height(18.dp).fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.7f))
+                ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.6f))
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(14.dp).width(80.dp))
             }
+            Spacer(Modifier.width(8.dp))
+            ShimmerItem(modifier = Modifier.height(24.dp).width(60.dp))
+            Spacer(Modifier.width(8.dp))
+            ShimmerItem(modifier = Modifier.size(32.dp), shape = RoundedCornerShape(8.dp))
         }
     }
 }
@@ -141,7 +127,41 @@ fun ReservationCardShimmer() {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ShimmerItem(modifier = Modifier.height(20.dp).fillMaxWidth())
             ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.6f))
-            ShimmerItem(modifier = Modifier.height(18.dp).width(100.dp))
+            ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.4f))
         }
     }
+}
+
+@Composable
+fun StatCardShimmer() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            ShimmerItem(modifier = Modifier.size(28.dp), shape = RoundedCornerShape(4.dp))
+            Spacer(Modifier.height(8.dp))
+            ShimmerItem(modifier = Modifier.height(28.dp).width(60.dp))
+            Spacer(Modifier.height(4.dp))
+            ShimmerItem(modifier = Modifier.height(14.dp).width(100.dp))
+        }
+    }
+}
+
+@Composable
+fun InventoryRowShimmer() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            ShimmerItem(modifier = Modifier.height(14.dp).fillMaxWidth(0.5f))
+            Spacer(Modifier.height(4.dp))
+            ShimmerItem(modifier = Modifier.height(12.dp).width(60.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+        ShimmerItem(modifier = Modifier.size(24.dp), shape = RoundedCornerShape(4.dp))
+    }
+    HorizontalDivider(thickness = 0.5.dp)
 }

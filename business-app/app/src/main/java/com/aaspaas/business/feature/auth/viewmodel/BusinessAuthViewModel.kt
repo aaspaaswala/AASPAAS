@@ -14,7 +14,6 @@ import javax.inject.Inject
 data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val otpSent: Boolean = false,
     val isVerified: Boolean = false,
     val isRegistered: Boolean = false
 )
@@ -28,19 +27,10 @@ class BusinessAuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun sendOtp(mobile: String) {
+    fun login(mobile: String) {
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
-            authRepository.sendOtp(mobile)
-                .onSuccess { _uiState.value = AuthUiState(otpSent = true) }
-                .onFailure { _uiState.value = AuthUiState(error = it.message) }
-        }
-    }
-
-    fun verifyOtp(mobile: String, otp: String) {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState(isLoading = true)
-            authRepository.verifyOtp(mobile, otp)
+            authRepository.login(mobile)
                 .onSuccess {
                     sessionManager.setLoggedIn(true)
                     _uiState.value = AuthUiState(isVerified = true)

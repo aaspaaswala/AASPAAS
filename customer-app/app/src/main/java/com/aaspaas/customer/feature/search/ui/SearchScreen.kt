@@ -72,7 +72,17 @@ fun SearchScreen(
         }
 
         when {
-            state.isLoading -> LoadingScreen()
+            state.isLoading && !state.hasSearched -> Column(Modifier.fillMaxSize()) {
+                Spacer(Modifier.height(8.dp))
+                ShimmerItem(modifier = Modifier.height(48.dp).fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(12.dp))
+                Spacer(Modifier.height(16.dp))
+                repeat(3) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        ShimmerItem(modifier = Modifier.height(64.dp).fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
             state.error != null -> ErrorScreen(state.error!!, onRetry = { viewModel.search() })
             !state.hasSearched -> EmptyScreen("Search for products, brands, or categories")
             state.products.isEmpty() && state.stores.isEmpty() -> EmptyScreen("No results found for \"$query\"")

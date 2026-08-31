@@ -7,8 +7,7 @@ import com.aaspaas.customer.core.network.safeApiCall
 import com.aaspaas.customer.core.network.toResult
 import com.aaspaas.customer.data.model.toDomain
 import com.aaspaas.customer.data.remote.AuthApiService
-import com.aaspaas.customer.data.remote.SendOtpRequest
-import com.aaspaas.customer.data.remote.VerifyOtpRequest
+import com.aaspaas.customer.data.remote.CustomerAuthRequest
 import com.aaspaas.customer.domain.model.User
 import com.aaspaas.customer.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.Flow
@@ -27,30 +26,19 @@ class AuthRepositoryImpl @Inject constructor(
     private val _currentUser = MutableStateFlow<User?>(null)
     override val currentUser: Flow<User?> = _currentUser.asStateFlow()
 
-    override suspend fun sendOtp(mobile: String): Result<Unit> {
-        // In mock/debug mode, skip real API call
-        if (BuildConfig.USE_MOCK_AUTH) return Result.success(Unit)
-        return safeApiCall { api.sendOtp(SendOtpRequest(mobile)) }.toResult().map { }
-    }
-
-    override suspend fun verifyOtp(mobile: String, otp: String): Result<User> {
+    override suspend fun login(mobile: String, name: String?): Result<User> {
         if (BuildConfig.USE_MOCK_AUTH) {
-            val mockUser = User(
-                id = "mock_user_001",
-                name = "Test User",
-                mobile = mobile,
-                email = null
-            )
+            val mockUser = User(id = "mock_user_001", name = name ?: "Test User", mobile = mobile, email = null)
             _currentUser.value = mockUser
             tokenProvider.saveToken("mock_jwt_token")
             sessionManager.setLoggedIn(true)
             return Result.success(mockUser)
         }
-        return safeApiCall { api.verifyOtp(VerifyOtpRequest(mobile, otp)) }
+        return safeApiCall { api.login(CustomerAuthRequest(phone = mobile, name = name)) }
             .toResult()
             .mapCatching { response ->
                 val authData = response.data ?: error("Empty auth response")
-                tokenProvider.saveToken(authData.token)
+                tokenProvider.saveTokens(authData.accessToken, authData.refreshToken)
                 val user = authData.user.toDomain()
                 _currentUser.value = user
                 sessionManager.setLoggedIn(true)

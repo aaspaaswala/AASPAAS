@@ -22,9 +22,9 @@ let variantId: string;
 let inventoryId: string;
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
+  mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 120000 } });
   await mongoose.connect(mongod.getUri());
-}, 60000);
+}, 120000);
 
 afterAll(async () => {
   await mongoose.disconnect();

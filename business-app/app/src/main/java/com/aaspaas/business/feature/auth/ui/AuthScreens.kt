@@ -20,7 +20,6 @@ import com.aaspaas.business.core.ui.theme.BusinessAccent
 import com.aaspaas.business.core.ui.theme.BusinessBrand
 import com.aaspaas.business.core.ui.theme.White
 import com.aaspaas.business.feature.auth.viewmodel.BusinessAuthViewModel
-import kotlinx.coroutines.delay
 
 @Composable
 fun BusinessSplashScreen(
@@ -28,7 +27,6 @@ fun BusinessSplashScreen(
     onNavigateToDashboard: () -> Unit,
     viewModel: BusinessAuthViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(1000)
         if (viewModel.isLoggedIn()) onNavigateToDashboard() else onNavigateToAuth()
@@ -43,30 +41,36 @@ fun BusinessSplashScreen(
 }
 
 @Composable
-fun BusinessPhoneAuthScreen(
-    onOtpSent: (String) -> Unit,
+fun BusinessLoginScreen(
+    onLoggedIn: () -> Unit,
     onRegisterClick: () -> Unit,
     viewModel: BusinessAuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var mobile by remember { mutableStateOf("") }
 
-    LaunchedEffect(state.otpSent) { if (state.otpSent) onOtpSent(mobile) }
+    LaunchedEffect(state.isVerified) { if (state.isVerified) onLoggedIn() }
 
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
+        Box(
+            modifier = Modifier.size(80.dp).background(BusinessBrand, RoundedCornerShape(20.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("APW", style = MaterialTheme.typography.headlineMedium, color = White)
+        }
+        Spacer(Modifier.height(24.dp))
         Text("Welcome Back", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("APW Business", style = MaterialTheme.typography.displayMedium, color = BusinessBrand)
         Spacer(Modifier.height(48.dp))
 
-        Text("Enter your mobile number", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = mobile,
             onValueChange = { if (it.length <= 10) mobile = it.filter { c -> c.isDigit() } },
             modifier = Modifier.fillMaxWidth(),
+            label = { Text("Mobile Number") },
             placeholder = { Text("10-digit mobile number") },
             prefix = { Text("+91  ") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -81,14 +85,14 @@ fun BusinessPhoneAuthScreen(
 
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { viewModel.sendOtp(mobile) },
+            onClick = { viewModel.login(mobile) },
             modifier = Modifier.fillMaxWidth().height(52.dp),
             enabled = mobile.length == 10 && !state.isLoading,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = BusinessAccent)
         ) {
             if (state.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = White, strokeWidth = 2.dp)
-            else Text("Send OTP", style = MaterialTheme.typography.labelLarge)
+            else Text("Login", style = MaterialTheme.typography.labelLarge)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -97,59 +101,6 @@ fun BusinessPhoneAuthScreen(
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(12.dp)
         ) { Text("Register New Business") }
-    }
-}
-
-@Composable
-fun BusinessOtpScreen(
-    mobile: String,
-    onVerified: () -> Unit,
-    onBack: () -> Unit,
-    viewModel: BusinessAuthViewModel = hiltViewModel()
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var otp by remember { mutableStateOf("") }
-
-    LaunchedEffect(state.isVerified) { if (state.isVerified) onVerified() }
-
-    Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Verify OTP", style = MaterialTheme.typography.headlineLarge, color = BusinessBrand)
-        Spacer(Modifier.height(8.dp))
-        Text("Sent to +91 $mobile", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(40.dp))
-
-        OutlinedTextField(
-            value = otp,
-            onValueChange = { if (it.length <= 6) otp = it.filter { c -> c.isDigit() } },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("6-digit OTP") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        state.error?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = { viewModel.verifyOtp(mobile, otp) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            enabled = otp.length == 6 && !state.isLoading,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = BusinessAccent)
-        ) {
-            if (state.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = White, strokeWidth = 2.dp)
-            else Text("Verify & Continue", style = MaterialTheme.typography.labelLarge)
-        }
-
-        Spacer(Modifier.height(16.dp))
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Change number") }
     }
 }
 
@@ -218,7 +169,7 @@ fun BusinessRegisterScreen(
                         ownerName = ownerName, businessName = businessName,
                         mobile = mobile, email = email.ifBlank { null },
                         category = category, address = address,
-                        latitude = 0.0, longitude = 0.0, // Location picker in Phase 2
+                        latitude = 0.0, longitude = 0.0,
                         openingHours = openingHours
                     )
                 },
