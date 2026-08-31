@@ -1,0 +1,11 @@
+# DO NOT COMMIT THIS FILE
+# Copy this file to local.properties and fill in your values
+
+# Backend base URL (default points to Android emulator localhost)
+BASE_URL=http://10.0.2.2:3000/api/v1/
+
+# Google Maps API Key
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY_HERE
+
+# SDK path (set by Android Studio automatically)
+# sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk

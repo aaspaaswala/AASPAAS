@@ -1,0 +1,7 @@
+# DO NOT COMMIT THIS FILE
+# Copy this file to local.properties and fill in your values
+
+BASE_URL=http://10.0.2.2:3000/api/v1/
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY_HERE
+
+# sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk

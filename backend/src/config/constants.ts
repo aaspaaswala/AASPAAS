@@ -1,0 +1,30 @@
+export const ROLES = {
+  CUSTOMER: 'CUSTOMER',
+  RETAILER: 'RETAILER',
+  ADMIN: 'ADMIN',
+} as const;
+
+export const RESERVATION_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export const VERIFICATION_STATUS = {
+  PENDING: 'PENDING',
+  VERIFIED: 'VERIFIED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export const STOCK_STATUS = {
+  AVAILABLE: 'AVAILABLE',
+  LOW_STOCK: 'LOW_STOCK',
+  OUT_OF_STOCK: 'OUT_OF_STOCK',
+} as const;
+
+export const LOW_STOCK_THRESHOLD = 3;
+
+export const OTP_EXPIRY_MINUTES = 10;

@@ -1,0 +1,137 @@
+package com.aaspaas.business.feature.inventory.ui
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aaspaas.business.core.ui.theme.*
+import com.aaspaas.business.domain.model.InventoryStatus
+import com.aaspaas.business.domain.model.Product
+import com.aaspaas.business.domain.model.ProductVariant
+import com.aaspaas.business.feature.inventory.viewmodel.InventoryViewModel
+
+@Composable
+fun InventoryScreen(
+    onBack: () -> Unit,
+    viewModel: InventoryViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Inventory") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null) } }
+            )
+        }
+    ) { padding ->
+        when {
+            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.error != null -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { viewModel.load() }) { Text("Retry") }
+                }
+            }
+            else -> LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.products) { product ->
+                    InventoryProductCard(product = product, onUpdateStock = { inventoryId, stock ->
+                        viewModel.updateStock(inventoryId, stock)
+                    })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InventoryProductCard(product: Product, onUpdateStock: (String, Int) -> Unit) {
+    Card(shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(1.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text(product.name, style = MaterialTheme.typography.titleMedium)
+            product.brand?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Spacer(Modifier.height(8.dp))
+            product.variants.forEach { variant ->
+                VariantInventoryRow(variant = variant, onUpdateStock = { stock -> onUpdateStock(variant.inventory.id, stock) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun VariantInventoryRow(variant: ProductVariant, onUpdateStock: (Int) -> Unit) {
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    if (showEditDialog) {
+        StockEditDialog(
+            currentStock = variant.inventory.availableStock,
+            onConfirm = { newStock -> onUpdateStock(newStock); showEditDialog = false },
+            onDismiss = { showEditDialog = false }
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            val label = listOfNotNull(variant.size?.let { "Size: $it" }, variant.color?.let { "Color: $it" }).joinToString(" • ")
+            if (label.isNotEmpty()) Text(label, style = MaterialTheme.typography.bodySmall)
+            Text("₹${variant.price.toInt()}", style = MaterialTheme.typography.labelMedium, color = BusinessAccent)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            val inv = variant.inventory
+            val statusColor = when (inv.status) {
+                InventoryStatus.OUT_OF_STOCK -> OutOfStock
+                InventoryStatus.LOW_STOCK -> LowStock
+                InventoryStatus.RESERVED -> com.aaspaas.business.core.ui.theme.Warning
+                else -> Available
+            }
+            Text("Available: ${inv.availableStock}", style = MaterialTheme.typography.labelMedium, color = statusColor)
+            Text("Reserved: ${inv.reservedStock}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { showEditDialog = true }) {
+            Icon(Icons.Default.Edit, null, tint = BusinessBrand, modifier = Modifier.size(18.dp))
+        }
+    }
+    HorizontalDivider(thickness = 0.5.dp)
+}
+
+@Composable
+private fun StockEditDialog(currentStock: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
+    var stockText by remember { mutableStateOf(currentStock.toString()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Update Stock") },
+        text = {
+            OutlinedTextField(
+                value = stockText,
+                onValueChange = { stockText = it.filter { c -> c.isDigit() } },
+                label = { Text("Available Stock") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(stockText.toIntOrNull() ?: currentStock) }) { Text("Update") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
