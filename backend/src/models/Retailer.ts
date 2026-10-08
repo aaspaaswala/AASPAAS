@@ -9,8 +9,14 @@ export interface IRetailer extends Document {
   email?: string;
   category?: string;
   verificationStatus: VerificationStatus;
-  otp?: string;
+  isBlocked: boolean;
+  blockedAt?: Date;
+  blockReason?: string;
+  otpHash?: string;
   otpExpiresAt?: Date;
+  otpChannel?: 'email' | 'phone';
+  otpAttempts: number;
+  otpRequestedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,8 +33,14 @@ const retailerSchema = new Schema<IRetailer>(
       enum: ['PENDING', 'VERIFIED', 'REJECTED'],
       default: 'PENDING',
     },
-    otp: { type: String, select: false, default: undefined },
+    isBlocked: { type: Boolean, default: false },
+    blockedAt: { type: Date, default: undefined },
+    blockReason: { type: String, trim: true, maxlength: 500, default: undefined },
+    otpHash: { type: String, select: false, default: undefined },
     otpExpiresAt: { type: Date, select: false, default: undefined },
+    otpChannel: { type: String, enum: ['email', 'phone'], select: false, default: undefined },
+    otpAttempts: { type: Number, default: 0, select: false },
+    otpRequestedAt: { type: Date, select: false, default: undefined },
   },
   { timestamps: true }
 );

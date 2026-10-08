@@ -17,8 +17,11 @@ data class SearchUiState(
     val isLoading: Boolean = false,
     val products: List<Product> = emptyList(),
     val stores: List<Store> = emptyList(),
+    val brands: List<String> = emptyList(),
+    val categories: List<String> = emptyList(),
     val error: String? = null,
-    val hasSearched: Boolean = false
+    val hasSearched: Boolean = false,
+    val recentSearches: List<String> = emptyList()
 )
 
 @OptIn(FlowPreview::class)
@@ -34,6 +37,9 @@ class SearchViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     val query = _query.asStateFlow()
 
+    // In-memory recent searches (max 5); replace with DataStore for persistence
+    private val recentSearches = mutableListOf<String>()
+
     init {
         _query
             .debounce(400)
@@ -47,14 +53,41 @@ class SearchViewModel @Inject constructor(
     fun search(q: String = _query.value) {
         if (q.isBlank()) return
         viewModelScope.launch {
-            _uiState.value = SearchUiState(isLoading = true, hasSearched = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, hasSearched = true)
             val location = locationProvider.getCurrentLocation().getOrNull()
             val result = productRepository.search(
                 SearchQuery(text = q, latitude = location?.latitude, longitude = location?.longitude)
             )
+            // Save to recent searches
+            if (!recentSearches.contains(q)) {
+                recentSearches.add(0, q)
+                if (recentSearches.size > 5) recentSearches.removeLastOrNull()
+            }
             result
-                .onSuccess { _uiState.value = SearchUiState(products = it.products, stores = it.stores, hasSearched = true) }
-                .onFailure { _uiState.value = SearchUiState(error = it.message, hasSearched = true) }
+                .onSuccess {
+                    val brands = it.products.mapNotNull { p -> p.brand }.distinct()
+                    val categories = it.products.map { p -> p.category }.distinct()
+                    _uiState.value = SearchUiState(
+                        products = it.products,
+                        stores = it.stores,
+                        brands = brands,
+                        categories = categories,
+                        hasSearched = true,
+                        recentSearches = recentSearches.toList()
+                    )
+                }
+                .onFailure {
+                    _uiState.value = SearchUiState(
+                        error = it.message,
+                        hasSearched = true,
+                        recentSearches = recentSearches.toList()
+                    )
+                }
         }
+    }
+
+    fun clearRecentSearches() {
+        recentSearches.clear()
+        _uiState.value = _uiState.value.copy(recentSearches = emptyList())
     }
 }

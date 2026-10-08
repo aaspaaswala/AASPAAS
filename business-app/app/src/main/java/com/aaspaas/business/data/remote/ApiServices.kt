@@ -4,10 +4,25 @@ import retrofit2.http.*
 
 interface BusinessAuthApiService {
     @POST("business/auth/login")
-    suspend fun login(@Body request: LoginRequest): ApiResponse<AuthResponse>
+    suspend fun login(@Body request: LoginRequest): ApiResponse<Any>
+
+    @POST("business/auth/phone/request")
+    suspend fun requestPhoneOtp(@Body request: PhoneOtpRequest): ApiResponse<Any>
+
+    @POST("business/auth/phone/verify")
+    suspend fun verifyPhoneOtp(@Body request: PhoneOtpVerifyRequest): ApiResponse<AuthResponse>
 
     @POST("business/auth/register")
     suspend fun register(@Body request: RegisterBusinessRequest): ApiResponse<AuthResponse>
+
+    @POST("business/auth/email/request")
+    suspend fun requestEmailOtp(@Body request: EmailOtpRequest): ApiResponse<Any>
+
+    @POST("business/auth/email/verify")
+    suspend fun verifyEmailOtp(@Body request: EmailOtpVerifyRequest): ApiResponse<AuthResponse>
+
+    @POST("business/auth/social")
+    suspend fun socialLogin(@Body request: SocialAuthRequest): ApiResponse<AuthResponse>
 }
 
 interface BusinessStoreApiService {
@@ -45,11 +60,20 @@ interface BusinessReservationApiService {
     @POST("business/reservations/{id}/confirm")
     suspend fun confirmReservation(@Path("id") id: String): ApiResponse<Unit>
 
+    @POST("business/reservations/{id}/ready")
+    suspend fun markReservationReady(@Path("id") id: String): ApiResponse<Unit>
+
+    @POST("business/reservations/{id}/reject")
+    suspend fun rejectReservation(@Path("id") id: String, @Body request: RejectReservationRequest): ApiResponse<Unit>
+
     @POST("business/reservations/{id}/complete")
     suspend fun completeReservation(@Path("id") id: String): ApiResponse<Unit>
 
     @POST("business/reservations/{id}/cancel")
     suspend fun cancelReservation(@Path("id") id: String): ApiResponse<Unit>
+
+    @POST("business/reservations/{id}/no-show")
+    suspend fun markNoShow(@Path("id") id: String): ApiResponse<Unit>
 
     @GET("business/dashboard")
     suspend fun getDashboardStats(): ApiResponse<DashboardStatsDto>

@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import { Reservation } from './reservation.model';
 import { Inventory } from '../../models/Inventory';
 import { ProductVariant } from '../../models/ProductVariant';
@@ -65,29 +64,6 @@ export async function createReservation(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
 
-  const reservation = await Reservation.create({
-    customerId: auth.id,
-    storeId: store._id,
-    productId: product._id,
-    variantId: variant._id,
-    inventoryId: inventory._id,
-    customerName: customer.name || 'Customer',
-    customerMobile: customer.phone,
-    productName: product.name,
-    productImage: product.images?.[0],
-    variantSku: variant.sku,
-    variantDescription: buildVariantDescription(variant.attributes),
-    storeName: store.name,
-    storeAddress: store.address,
-    storeLocation: store.location,
-    storePhone: store.phone,
-    price: inventory.price,
-    quantity: input.quantity,
-    reservationCode: generateReservationCode(),
-    durationHours,
-    expiresAt,
-  });
-
   const updatedInventory = await Inventory.findOneAndUpdate(
     { _id: inventory._id, availableStock: { $gte: input.quantity } },
     {
@@ -97,8 +73,39 @@ export async function createReservation(
   );
 
   if (!updatedInventory) {
-    await Reservation.findByIdAndDelete(reservation._id);
     throw new ConflictError('Failed to reserve stock. Please try again.');
+  }
+
+  let reservation: InstanceType<typeof Reservation>;
+  try {
+    reservation = await Reservation.create({
+      customerId: auth.id,
+      storeId: store._id,
+      productId: product._id,
+      variantId: variant._id,
+      inventoryId: inventory._id,
+      customerName: customer.name || 'Customer',
+      customerMobile: customer.phone || '',
+      productName: product.name,
+      productImage: product.images?.[0],
+      variantSku: variant.sku,
+      variantDescription: buildVariantDescription(variant.attributes),
+      storeName: store.name,
+      storeAddress: store.address,
+      storeLocation: store.location,
+      storePhone: store.phone,
+      price: inventory.price,
+      quantity: input.quantity,
+      reservationCode: generateReservationCode(),
+      durationHours,
+      expiresAt,
+    });
+  } catch (error) {
+    await Inventory.findOneAndUpdate(
+      { _id: inventory._id, reservedStock: { $gte: input.quantity } },
+      { $inc: { reservedStock: -input.quantity, availableStock: input.quantity } }
+    );
+    throw error;
   }
 
   logger.info('Reservation created', {
@@ -153,14 +160,22 @@ export async function cancelMyReservation(
     throw new ForbiddenError('Not your reservation');
   }
 
-  if (!['PENDING', 'CONFIRMED'].includes(reservation.status)) {
+  if (!['PENDING', 'CONFIRMED', 'READY'].includes(reservation.status)) {
     throw new ConflictError('Cannot cancel reservation in current status');
   }
 
-  reservation.status = RESERVATION_STATUS.CANCELLED;
-  reservation.cancelledAt = new Date();
+  const cancelled = await Reservation.findOneAndUpdate(
+    {
+      _id: reservation._id,
+      status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] },
+    },
+    { $set: { status: RESERVATION_STATUS.CANCELLED, cancelledAt: new Date() } },
+    { new: true }
+  );
 
-  await reservation.save();
+  if (!cancelled) {
+    throw new ConflictError('Reservation was already updated');
+  }
 
   await Inventory.findByIdAndUpdate(reservation.inventoryId, {
     $inc: { reservedStock: -reservation.quantity, availableStock: reservation.quantity },
@@ -175,20 +190,34 @@ export async function cancelMyReservation(
 
 export async function expireOldReservations(): Promise<number> {
   const now = new Date();
-  const expired = await Reservation.find({
-    status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED] },
+  const candidates = await Reservation.find({
+    status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] },
     expiresAt: { $lte: now },
   }).lean();
 
-  if (expired.length === 0) return 0;
+  if (candidates.length === 0) return 0;
 
   const inventoryUpdates = new Map<string, number>();
-  const reservationIds: Types.ObjectId[] = [];
+  let expiredCount = 0;
 
-  for (const r of expired) {
+  for (const r of candidates) {
+    const expired = await Reservation.findOneAndUpdate(
+      {
+        _id: r._id,
+        status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] },
+        expiresAt: { $lte: now },
+      },
+      { $set: { status: RESERVATION_STATUS.EXPIRED } },
+      { new: true }
+    ).lean();
+
+    if (!expired) continue;
+
     inventoryUpdates.set(r.inventoryId.toString(), (inventoryUpdates.get(r.inventoryId.toString()) || 0) + r.quantity);
-    reservationIds.push(r._id);
+    expiredCount += 1;
   }
+
+  if (expiredCount === 0) return 0;
 
   for (const [inventoryId, totalQty] of inventoryUpdates) {
     await Inventory.findByIdAndUpdate(inventoryId, {
@@ -196,13 +225,8 @@ export async function expireOldReservations(): Promise<number> {
     });
   }
 
-  await Reservation.updateMany(
-    { _id: { $in: reservationIds } },
-    { $set: { status: RESERVATION_STATUS.EXPIRED } }
-  );
-
-  logger.info('Reservations expired', { count: expired.length });
-  return expired.length;
+  logger.info('Reservations expired', { count: expiredCount });
+  return expiredCount;
 }
 
 function sanitizeReservation(reservation: any): object {

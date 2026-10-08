@@ -321,6 +321,50 @@ export class MongoProductSearchService {
       store: transformStore(firstStore || {}),
     };
   }
+
+  async getProductPriceComparison(
+    productId: string,
+    latitude?: number,
+    longitude?: number,
+    radiusKm = 10
+  ): Promise<Array<{ store: object; variantId: string; price: number; availableStock: number; distanceKm?: number }>> {
+    const product = await Product.findById(productId).lean();
+    if (!product) throw new NotFoundError('Product');
+
+    const variants = await ProductVariant.find({ productId, isActive: true }).lean();
+    const variantIds = variants.map((v) => v._id);
+
+    let nearbyStores: any[] = [];
+    if (latitude != null && longitude != null) {
+      nearbyStores = await Store.find({
+        isActive: true,
+        location: {
+          $nearSphere: {
+            $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+            $maxDistance: radiusKm * 1000,
+          },
+        },
+      })
+        .select('_id name address location phone openingHours images categories rating isActive')
+        .lean();
+    }
+
+    const inventories = await Inventory.find({
+      productVariantId: { $in: variantIds },
+      availableStock: { $gt: 0 },
+      ...(nearbyStores.length > 0 ? { storeId: { $in: nearbyStores.map((s) => s._id) } } : {}),
+    }).lean();
+
+    const storeMap = new Map<string, any>(nearbyStores.map((s) => [s._id.toString(), s]));
+
+    return inventories.map((inv: any) => ({
+      store: transformStore(storeMap.get(inv.storeId.toString()) || {}),
+      variantId: inv.productVariantId.toString(),
+      price: formatPrice(inv.price),
+      availableStock: inv.availableStock,
+      distanceKm: storeMap.get(inv.storeId.toString())?.distanceKm,
+    }));
+  }
 }
 
 export const productSearchService = new MongoProductSearchService();

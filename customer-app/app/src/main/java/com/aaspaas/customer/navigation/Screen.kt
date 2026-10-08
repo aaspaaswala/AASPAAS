@@ -11,6 +11,9 @@ sealed class Screen(val route: String) {
         fun createRoute(mobile: String) = "auth/otp/$mobile"
     }
 
+    // Location
+    object LocationPermission : Screen("location/permission")
+
     // Main
     object Home : Screen("home")
     object Search : Screen("search?query={query}") {
@@ -26,16 +29,25 @@ sealed class Screen(val route: String) {
     object StoreDetail : Screen("store/{storeId}") {
         fun createRoute(storeId: String) = "store/$storeId"
     }
+    object StoreMap : Screen("store/{storeId}/map") {
+        fun createRoute(storeId: String) = "store/$storeId/map"
+    }
 
     // Reservation
-    object ReservationConfirm : Screen("reservation/confirm/{variantId}") {
-        fun createRoute(variantId: String) = "reservation/confirm/$variantId"
+    object ReservationConfirm : Screen("reservation/confirm/{productId}/{variantId}") {
+        fun createRoute(productId: String, variantId: String) = "reservation/confirm/$productId/$variantId"
     }
     object ReservationDetail : Screen("reservation/{reservationId}") {
         fun createRoute(id: String) = "reservation/$id"
     }
     object MyReservations : Screen("reservations")
 
-    // Profile
+    // Profile & sub-screens
     object Profile : Screen("profile")
+    object Wishlist : Screen("wishlist")
+    object Notifications : Screen("notifications")
+    object Settings : Screen("settings")
+    object SavedLocations : Screen("saved-locations")
+    object EditProfile : Screen("edit-profile")
+    object AddLocation : Screen("add-location")
 }

@@ -14,6 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aaspaas.business.core.ui.components.BrandOutlinedButton
+import com.aaspaas.business.core.ui.components.EmptyState
+import com.aaspaas.business.core.ui.components.ErrorState
+import com.aaspaas.business.core.ui.components.LoadingState
+import com.aaspaas.business.core.ui.components.StatusChip
 import com.aaspaas.business.core.ui.theme.BusinessAccent
 import com.aaspaas.business.core.ui.theme.BusinessBrand
 import com.aaspaas.business.core.ui.theme.StateActive
@@ -38,19 +43,26 @@ fun StoreProfileScreen(
         }
     ) { padding ->
         when {
-            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                LoadingState("Loading store profile")
             }
-            state.error != null && state.store == null -> Box(
-                Modifier.fillMaxSize().padding(32.dp),
+            state.error != null -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                ErrorState(state.error ?: "Unable to load store profile", onRetry = viewModel::loadStore)
+            }
+            state.store == null -> Box(
+                Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Store, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(16.dp))
-                    Text("Store not set up yet", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Your store will be created after registration is verified.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    EmptyState(
+                        title = "Store not set up yet",
+                        description = "Store details will appear here once your business profile is configured.",
+                        icon = Icons.Default.Store
+                    )
+                    BrandOutlinedButton("Refresh", onClick = viewModel::loadStore)
                 }
             }
             else -> {
@@ -63,20 +75,19 @@ fun StoreProfileScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Verification status banner
                     val (statusColor, statusLabel) = when (store?.verificationStatus) {
                         VerificationStatus.VERIFIED -> StateActive to "Verified"
                         VerificationStatus.REJECTED -> StateCancelled to "Rejected"
                         else -> StatePending to "Pending Verification"
                     }
                     Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.1f))
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Verification Status", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(statusLabel, style = MaterialTheme.typography.titleMedium, color = statusColor)
+                                StatusChip(statusLabel, statusColor)
                             }
                         }
                     }
@@ -89,21 +100,10 @@ fun StoreProfileScreen(
                         if (store.categories.isNotEmpty()) {
                             StoreInfoRow("Categories", store.categories.joinToString(", "))
                         }
-                    } else {
-                        Text(
-                            "Store details will appear here once your account is set up.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
                     Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = { viewModel.loadStore() },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BusinessAccent)
-                    ) { Text("Refresh") }
+                    BrandOutlinedButton("Refresh", onClick = viewModel::loadStore, modifier = Modifier.fillMaxWidth())
                 }
             }
         }

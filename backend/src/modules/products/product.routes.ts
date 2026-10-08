@@ -12,4 +12,7 @@ router.get('/nearby', productController.nearby);
 // GET /api/v1/products/:id
 router.get('/:id', productController.getById);
 
+// GET /api/v1/products/:id/price-comparison?latitude=26.9&longitude=75.8&radius=5
+router.get('/:id/price-comparison', productController.priceComparison);
+
 export default router;

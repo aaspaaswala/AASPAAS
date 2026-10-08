@@ -18,7 +18,10 @@ export interface IReservation extends Document {
   storePhone?: string;
   price: number;
   quantity: number;
-  status: 'PENDING' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+  status: 'PENDING' | 'CONFIRMED' | 'READY' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED' | 'NO_SHOW';
+  rejectionReason?: string;
+  rejectedAt?: Date;
+  noShowAt?: Date;
   reservationCode: string;
   durationHours: number;
   expiresAt: Date;
@@ -52,9 +55,12 @@ const reservationSchema = new Schema<IReservation>(
     quantity: { type: Number, required: true, min: 1, default: 1 },
     status: {
       type: String,
-      enum: ['PENDING', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED'],
+      enum: ['PENDING', 'CONFIRMED', 'READY', 'COMPLETED', 'CANCELLED', 'EXPIRED', 'REJECTED', 'NO_SHOW'],
       default: 'PENDING',
     },
+    rejectionReason: { type: String, trim: true, maxlength: 500, default: undefined },
+    rejectedAt: { type: Date, default: undefined },
+    noShowAt: { type: Date, default: undefined },
     reservationCode: { type: String, required: true, unique: true },
     durationHours: { type: Number, required: true, min: 1 },
     expiresAt: { type: Date, required: true },

@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -33,7 +33,6 @@ class MainActivity : ComponentActivity() {
 
                 val startDestination = when {
                     isLoggedIn -> Screen.Home.route
-                    onboardingDone -> Screen.AuthPhone.route
                     else -> Screen.Splash.route
                 }
 

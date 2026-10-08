@@ -61,14 +61,17 @@ data class Reservation(
     val productName: String,
     val variantDescription: String,
     val price: Double,
+    val quantity: Int,
+    val reservationCode: String?,
     val status: ReservationStatus,
     val createdAt: Instant,
     val expiresAt: Instant,
     val completedAt: Instant?,
-    val cancelledAt: Instant?
+    val cancelledAt: Instant?,
+    val rejectedAt: Instant?
 )
 
-enum class ReservationStatus { PENDING, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, EXPIRED }
+enum class ReservationStatus { PENDING, CONFIRMED, READY, COMPLETED, CANCELLED, EXPIRED, REJECTED, NO_SHOW }
 
 data class DashboardStats(
     val totalProducts: Int,

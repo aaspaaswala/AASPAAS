@@ -21,7 +21,7 @@ class ReservationRepositoryImpl @Inject constructor(
     private val _reservations = MutableStateFlow<List<Reservation>>(emptyList())
 
     override suspend fun createReservation(variantId: String): Result<Reservation> =
-        safeApiCall { api.createReservation(CreateReservationRequest(variantId)) }
+        safeApiCall { api.createReservation(CreateReservationRequest(variantId = variantId, quantity = 1)) }
             .toResult()
             .mapCatching { response ->
                 val reservation = response.data?.toDomain() ?: error("Empty reservation response")
@@ -37,7 +37,9 @@ class ReservationRepositoryImpl @Inject constructor(
     override suspend fun getReservationById(id: String): Result<Reservation> =
         safeApiCall { api.getReservationById(id) }
             .toResult()
-            .mapCatching { it.data?.reservation?.toDomain() ?: error("Reservation not found") }
+            .mapCatching { response ->
+                response.data?.toDomain() ?: error("Reservation not found")
+            }
 
     override fun getMyReservations(): Flow<List<Reservation>> = _reservations
 
@@ -45,7 +47,8 @@ class ReservationRepositoryImpl @Inject constructor(
         safeApiCall { api.getMyReservations() }
             .toResult()
             .mapCatching { response ->
-                val list = response.data?.reservations?.map { it.toDomain() } ?: emptyList()
+                // Backend returns list directly as data
+                val list = response.data?.map { it.toDomain() } ?: emptyList()
                 _reservations.value = list
                 list
             }

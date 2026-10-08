@@ -47,18 +47,22 @@ fun ProductDto.toDomain() = Product(
 fun ReservationDto.toDomain() = Reservation(
     id = id, customerName = customerName, customerMobile = customerMobile,
     productName = productName, variantDescription = variantDescription, price = price,
+    quantity = quantity, reservationCode = reservationCode,
     status = when (status) {
         "CONFIRMED" -> ReservationStatus.CONFIRMED
-        "ACTIVE" -> ReservationStatus.ACTIVE
+        "READY" -> ReservationStatus.READY
         "COMPLETED" -> ReservationStatus.COMPLETED
         "CANCELLED" -> ReservationStatus.CANCELLED
         "EXPIRED" -> ReservationStatus.EXPIRED
+        "REJECTED" -> ReservationStatus.REJECTED
+        "NO_SHOW" -> ReservationStatus.NO_SHOW
         else -> ReservationStatus.PENDING
     },
     createdAt = Instant.parse(createdAt),
     expiresAt = Instant.parse(expiresAt),
     completedAt = completedAt?.let { Instant.parse(it) },
-    cancelledAt = cancelledAt?.let { Instant.parse(it) }
+    cancelledAt = cancelledAt?.let { Instant.parse(it) },
+    rejectedAt = rejectedAt?.let { Instant.parse(it) }
 )
 
 fun DashboardStatsDto.toDomain() = DashboardStats(

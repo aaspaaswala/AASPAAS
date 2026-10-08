@@ -1,5 +1,18 @@
 # Aas Paas Wala — Implementation Plan
 
+## Phase One Status
+
+The backend foundation is implemented and verified. Reservation, business, and
+category APIs are available under `/api/v1`, with JWT role guards, Zod request
+validation, inventory invariant checks, and MongoDB integration coverage.
+
+Reservation cancellation and scheduled expiry use conditional state updates so
+stock is released only when the reservation transitions from an active state.
+
+Remaining production work is intentionally deferred to Phase Two: real SMS
+delivery, database-backed admin users, API documentation, CI/CD, and persistent
+mobile offline storage.
+
 ## Current Architecture
 
 ### Backend
@@ -52,7 +65,7 @@
 
 ---
 
-## Missing Functionality
+## Deferred Functionality
 
 1. **Reservation backend module** — model, routes, controller, service, validation
 2. **Business API namespace** — dashboard, store, products, inventory, reservations

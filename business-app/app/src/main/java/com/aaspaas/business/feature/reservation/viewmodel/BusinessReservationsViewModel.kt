@@ -28,15 +28,18 @@ class BusinessReservationsViewModel @Inject constructor(
             .map { list ->
                 BusinessReservationsUiState(
                     isLoading = false,
-                    active = list.filter { it.status in listOf(ReservationStatus.ACTIVE, ReservationStatus.CONFIRMED, ReservationStatus.PENDING) },
+                    active = list.filter { it.status in listOf(ReservationStatus.READY, ReservationStatus.CONFIRMED, ReservationStatus.PENDING) },
                     completed = list.filter { it.status == ReservationStatus.COMPLETED },
-                    cancelled = list.filter { it.status == ReservationStatus.CANCELLED },
+                    cancelled = list.filter { it.status in listOf(ReservationStatus.CANCELLED, ReservationStatus.REJECTED, ReservationStatus.NO_SHOW) },
                     expired = list.filter { it.status == ReservationStatus.EXPIRED }
                 )
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BusinessReservationsUiState())
 
     fun confirm(id: String) { viewModelScope.launch { repository.confirmReservation(id) } }
+    fun markReady(id: String) { viewModelScope.launch { repository.markReservationReady(id) } }
+    fun reject(id: String, reason: String? = null) { viewModelScope.launch { repository.rejectReservation(id, reason) } }
     fun complete(id: String) { viewModelScope.launch { repository.completeReservation(id) } }
     fun cancel(id: String) { viewModelScope.launch { repository.cancelReservation(id) } }
+    fun markNoShow(id: String) { viewModelScope.launch { repository.markNoShow(id) } }
 }

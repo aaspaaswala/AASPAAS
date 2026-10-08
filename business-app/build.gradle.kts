@@ -8,6 +8,3 @@ plugins {
     // alias(libs.plugins.google.services) apply false  // Disabled until google-services.json is added
 }
 
-// Redirect root build directory to D: drive
-layout.buildDirectory.set(file("D:/gradle_builds/business-app/root"))
-

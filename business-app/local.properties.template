@@ -4,4 +4,8 @@
 BASE_URL=http://10.0.2.2:3000/api/v1/
 MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY_HERE
 
+# OAuth configuration for native social sign-in
+GOOGLE_WEB_CLIENT_ID=YOUR_GOOGLE_WEB_CLIENT_ID
+FACEBOOK_APP_ID=YOUR_FACEBOOK_APP_ID
+
 # sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk

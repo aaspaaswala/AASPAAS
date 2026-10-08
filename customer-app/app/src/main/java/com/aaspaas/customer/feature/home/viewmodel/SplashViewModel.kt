@@ -14,15 +14,17 @@ class SplashViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    enum class Destination { HOME, ONBOARDING }
+    enum class Destination { HOME, AUTH, ONBOARDING }
 
     private val _destination = MutableStateFlow<Destination?>(null)
     val destination = _destination.asStateFlow()
 
     init {
         viewModelScope.launch {
-            _destination.value = if (authRepository.isLoggedIn()) Destination.HOME
-                                  else Destination.ONBOARDING
+            _destination.value = when {
+                authRepository.isLoggedIn() -> Destination.HOME
+                else -> Destination.ONBOARDING
+            }
         }
     }
 }

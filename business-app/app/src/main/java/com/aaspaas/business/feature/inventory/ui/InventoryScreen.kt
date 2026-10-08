@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,9 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaspaas.business.core.ui.theme.*
-import com.aaspaas.business.core.ui.components.ErrorScreen
+import com.aaspaas.business.core.ui.components.BusinessSearchBar
+import com.aaspaas.business.core.ui.components.EmptyState
+import com.aaspaas.business.core.ui.components.ErrorState
 import com.aaspaas.business.core.ui.components.InventoryRowShimmer
-import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.LoadingState
+import com.aaspaas.business.core.ui.components.StatusChip
 import com.aaspaas.business.core.ui.components.ShimmerItem
 import com.aaspaas.business.domain.model.InventoryStatus
 import com.aaspaas.business.domain.model.Product
@@ -32,6 +36,13 @@ fun InventoryScreen(
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredProducts = remember(state.products, searchQuery) {
+        state.products.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+                it.brand.orEmpty().contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -47,6 +58,7 @@ fun InventoryScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item { LoadingState("Loading inventory") }
                 items(4) {
                     Column {
                         ShimmerItem(modifier = Modifier.height(20.dp).fillMaxWidth(), shape = RoundedCornerShape(8.dp))
@@ -56,19 +68,34 @@ fun InventoryScreen(
                     }
                 }
             }
-            state.error != null -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.load() }) { Text("Retry") }
-                }
+            state.error != null -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                ErrorState(state.error ?: "Unable to load inventory", onRetry = viewModel::load)
             }
             else -> LazyColumn(
                 Modifier.padding(padding),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(state.products) { product ->
+                item {
+                    BusinessSearchBar(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = "Search inventory"
+                    )
+                }
+                if (filteredProducts.isEmpty()) {
+                    item {
+                        EmptyState(
+                            title = if (state.products.isEmpty()) "Inventory is empty" else "No matching products",
+                            description = if (state.products.isEmpty()) "Product stock will appear here after products are added." else "Try another product name or brand.",
+                            icon = Icons.Default.Inventory2
+                        )
+                    }
+                }
+                items(filteredProducts) { product ->
                     InventoryProductCard(product = product, onUpdateStock = { inventoryId, stock ->
                         viewModel.updateStock(inventoryId, stock)
                     })
@@ -80,7 +107,11 @@ fun InventoryScreen(
 
 @Composable
 private fun InventoryProductCard(product: Product, onUpdateStock: (String, Int) -> Unit) {
-    Card(shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(1.dp)) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(Modifier.padding(12.dp)) {
             Text(product.name, style = MaterialTheme.typography.titleMedium)
             product.brand?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -121,8 +152,8 @@ private fun VariantInventoryRow(variant: ProductVariant, onUpdateStock: (Int) ->
                 InventoryStatus.RESERVED -> com.aaspaas.business.core.ui.theme.Warning
                 else -> Available
             }
-            Text("Available: ${inv.availableStock}", style = MaterialTheme.typography.labelMedium, color = statusColor)
-            Text("Reserved: ${inv.reservedStock}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusChip("Available ${inv.availableStock}", statusColor)
+            Text("Reserved ${inv.reservedStock}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = { showEditDialog = true }) {
             Icon(Icons.Default.Edit, null, tint = BusinessBrand, modifier = Modifier.size(18.dp))
@@ -147,7 +178,10 @@ private fun StockEditDialog(currentStock: Int, onConfirm: (Int) -> Unit, onDismi
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(stockText.toIntOrNull() ?: currentStock) }) { Text("Update") }
+            TextButton(
+                enabled = stockText.toIntOrNull() != null,
+                onClick = { onConfirm(stockText.toIntOrNull() ?: currentStock) }
+            ) { Text("Update", color = BusinessBrand) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

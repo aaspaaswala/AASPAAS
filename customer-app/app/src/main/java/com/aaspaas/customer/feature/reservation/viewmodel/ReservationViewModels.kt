@@ -3,6 +3,7 @@ package com.aaspaas.customer.feature.reservation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aaspaas.customer.domain.model.Product
+import com.aaspaas.customer.domain.model.ProductVariant
 import com.aaspaas.customer.domain.model.Reservation
 import com.aaspaas.customer.domain.model.ReservationStatus
 import com.aaspaas.customer.domain.repository.ProductRepository
@@ -20,6 +21,7 @@ import javax.inject.Inject
 data class ReservationConfirmUiState(
     val isLoading: Boolean = false,
     val product: Product? = null,
+    val selectedVariant: ProductVariant? = null,
     val variantId: String = "",
     val confirmedReservationId: String? = null,
     val error: String? = null
@@ -34,10 +36,21 @@ class ReservationConfirmViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReservationConfirmUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
-    fun load(variantId: String) {
-        // We need the product that contains this variant — search by variant id
-        // For now we store variantId and load product details via a search or direct call
-        _uiState.value = ReservationConfirmUiState(isLoading = false, variantId = variantId)
+    fun load(productId: String, variantId: String) {
+        viewModelScope.launch {
+            _uiState.value = ReservationConfirmUiState(isLoading = true, variantId = variantId)
+            productRepository.getProductById(productId)
+                .onSuccess { product ->
+                    val variant = product.variants.find { it.id == variantId }
+                        ?: product.variants.firstOrNull()
+                    _uiState.value = ReservationConfirmUiState(
+                        product = product,
+                        selectedVariant = variant,
+                        variantId = variantId
+                    )
+                }
+                .onFailure { _uiState.value = ReservationConfirmUiState(error = it.message) }
+        }
     }
 
     fun confirmReservation(variantId: String) {

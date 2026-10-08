@@ -101,7 +101,7 @@ export async function getReservation(req: AuthRequest, res: Response, next: Next
 export async function confirmReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const reservation = await businessService.confirmReservation(req.auth!.id, req.params.id);
-    sendSuccess(res, null, 'Reservation confirmed');
+    sendSuccess(res, reservation, 'Reservation confirmed');
   } catch (err) {
     next(err);
   }
@@ -110,7 +110,7 @@ export async function confirmReservation(req: AuthRequest, res: Response, next: 
 export async function completeReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const reservation = await businessService.completeReservation(req.auth!.id, req.params.id);
-    sendSuccess(res, null, 'Reservation completed');
+    sendSuccess(res, reservation, 'Reservation completed');
   } catch (err) {
     next(err);
   }
@@ -119,7 +119,35 @@ export async function completeReservation(req: AuthRequest, res: Response, next:
 export async function cancelReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const reservation = await businessService.cancelReservation(req.auth!.id, req.params.id);
-    sendSuccess(res, null, 'Reservation cancelled');
+    sendSuccess(res, reservation, 'Reservation cancelled');
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function markReservationReady(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const reservation = await businessService.markReservationReady(req.auth!.id, req.params.id);
+    sendSuccess(res, reservation, 'Reservation marked as ready for pickup');
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectReservation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : undefined;
+    const reservation = await businessService.rejectReservation(req.auth!.id, req.params.id, reason);
+    sendSuccess(res, reservation, 'Reservation rejected');
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function markNoShow(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const reservation = await businessService.markNoShow(req.auth!.id, req.params.id);
+    sendSuccess(res, reservation, 'Reservation marked as no-show');
   } catch (err) {
     next(err);
   }

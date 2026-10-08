@@ -363,15 +363,16 @@ export async function confirmReservation(retailerId: string, reservationId: stri
   const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
   if (!store) throw new NotFoundError('Store');
 
-  const reservation = await Reservation.findOne({ _id: reservationId, storeId: store._id });
-  if (!reservation) throw new NotFoundError('Reservation');
-
-  if (reservation.status !== RESERVATION_STATUS.PENDING) {
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: RESERVATION_STATUS.PENDING },
+    { $set: { status: RESERVATION_STATUS.CONFIRMED } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
     throw new ConflictError('Can only confirm PENDING reservations');
   }
-
-  reservation.status = RESERVATION_STATUS.CONFIRMED;
-  await reservation.save();
 
   logger.info('Reservation confirmed', { reservationId, retailerId });
   return buildBusinessReservationDto(reservation);
@@ -381,22 +382,92 @@ export async function completeReservation(retailerId: string, reservationId: str
   const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
   if (!store) throw new NotFoundError('Store');
 
-  const reservation = await Reservation.findOne({ _id: reservationId, storeId: store._id });
-  if (!reservation) throw new NotFoundError('Reservation');
-
-  if (![RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.ACTIVE].includes(reservation.status as any)) {
-    throw new ConflictError('Can only complete CONFIRMED or ACTIVE reservations');
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: { $in: [RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] } },
+    { $set: { status: RESERVATION_STATUS.COMPLETED, completedAt: new Date() } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
+    throw new ConflictError('Can only complete CONFIRMED or READY reservations');
   }
 
-  reservation.status = RESERVATION_STATUS.COMPLETED;
-  reservation.completedAt = new Date();
-  await reservation.save();
-
-  await Inventory.findByIdAndUpdate(reservation.inventoryId, {
-    $inc: { reservedStock: -reservation.quantity, soldStock: reservation.quantity },
-  });
+  const inventory = await Inventory.findOneAndUpdate(
+    { _id: reservation.inventoryId, reservedStock: { $gte: reservation.quantity } },
+    { $inc: { reservedStock: -reservation.quantity, soldStock: reservation.quantity } },
+    { new: true }
+  );
+  if (!inventory) throw new ConflictError('Reserved inventory was already updated');
 
   logger.info('Reservation completed', { reservationId, retailerId });
+  return buildBusinessReservationDto(reservation);
+}
+
+export async function markReservationReady(retailerId: string, reservationId: string): Promise<object> {
+  const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
+  if (!store) throw new NotFoundError('Store');
+
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: RESERVATION_STATUS.CONFIRMED },
+    { $set: { status: RESERVATION_STATUS.READY } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
+    throw new ConflictError('Can only mark CONFIRMED reservations as ready');
+  }
+
+  logger.info('Reservation marked ready', { reservationId, retailerId });
+  return buildBusinessReservationDto(reservation);
+}
+
+export async function rejectReservation(retailerId: string, reservationId: string, reason?: string): Promise<object> {
+  const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
+  if (!store) throw new NotFoundError('Store');
+
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: RESERVATION_STATUS.PENDING },
+    { $set: { status: RESERVATION_STATUS.REJECTED, rejectionReason: reason, rejectedAt: new Date() } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
+    throw new ConflictError('Can only reject PENDING reservations');
+  }
+
+  await Inventory.findOneAndUpdate(
+    { _id: reservation.inventoryId, reservedStock: { $gte: reservation.quantity } },
+    { $inc: { reservedStock: -reservation.quantity, availableStock: reservation.quantity } }
+  );
+
+  logger.info('Reservation rejected', { reservationId, retailerId, reason });
+  return buildBusinessReservationDto(reservation);
+}
+
+export async function markNoShow(retailerId: string, reservationId: string): Promise<object> {
+  const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
+  if (!store) throw new NotFoundError('Store');
+
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: { $in: [RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] } },
+    { $set: { status: RESERVATION_STATUS.NO_SHOW, noShowAt: new Date() } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
+    throw new ConflictError('Can only mark CONFIRMED or READY reservations as no-show');
+  }
+
+  await Inventory.findOneAndUpdate(
+    { _id: reservation.inventoryId, reservedStock: { $gte: reservation.quantity } },
+    { $inc: { reservedStock: -reservation.quantity, availableStock: reservation.quantity } }
+  );
+
+  logger.info('Reservation no-show', { reservationId, retailerId });
   return buildBusinessReservationDto(reservation);
 }
 
@@ -404,20 +475,25 @@ export async function cancelReservation(retailerId: string, reservationId: strin
   const store = await Store.findOne({ retailerId: new Types.ObjectId(retailerId) }).select('_id');
   if (!store) throw new NotFoundError('Store');
 
-  const reservation = await Reservation.findOne({ _id: reservationId, storeId: store._id });
-  if (!reservation) throw new NotFoundError('Reservation');
-
-  if (![RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED].includes(reservation.status as any)) {
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: reservationId, storeId: store._id, status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED] } },
+    { $set: { status: RESERVATION_STATUS.CANCELLED, cancelledAt: new Date() } },
+    { new: true }
+  );
+  if (!reservation) {
+    const exists = await Reservation.exists({ _id: reservationId, storeId: store._id });
+    if (!exists) throw new NotFoundError('Reservation');
     throw new ConflictError('Can only cancel PENDING or CONFIRMED reservations');
   }
 
-  reservation.status = RESERVATION_STATUS.CANCELLED;
-  reservation.cancelledAt = new Date();
-  await reservation.save();
-
-  await Inventory.findByIdAndUpdate(reservation.inventoryId, {
+  const inventory = await Inventory.findOneAndUpdate(
+    { _id: reservation.inventoryId, reservedStock: { $gte: reservation.quantity } },
+    {
     $inc: { reservedStock: -reservation.quantity, availableStock: reservation.quantity },
-  });
+    },
+    { new: true }
+  );
+  if (!inventory) throw new ConflictError('Reserved inventory was already updated');
 
   logger.info('Reservation cancelled by business', { reservationId, retailerId });
   return buildBusinessReservationDto(reservation);
@@ -458,7 +534,7 @@ export async function getDashboardStats(retailerId: string): Promise<object> {
   const [activeRes, todayRes] = await Promise.all([
     Reservation.countDocuments({
       storeId: store._id,
-      status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.ACTIVE] },
+      status: { $in: [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.READY] },
     }),
     Reservation.countDocuments({
       storeId: store._id,
@@ -530,16 +606,22 @@ function buildBusinessReservationDto(reservation: any): object {
   const variantDescription = reservation.variantDescription || '';
   return {
     _id: reservation._id,
+    reservationCode: reservation.reservationCode,
     customerName: reservation.customerName,
     customerMobile: reservation.customerMobile,
     productName: reservation.productName,
+    productImage: reservation.productImage,
     variantDescription,
     price: reservation.price / 100,
+    quantity: reservation.quantity,
     status: reservation.status,
     createdAt: reservation.createdAt,
     expiresAt: reservation.expiresAt,
     completedAt: reservation.completedAt,
     cancelledAt: reservation.cancelledAt,
+    rejectedAt: reservation.rejectedAt,
+    rejectionReason: reservation.rejectionReason,
+    noShowAt: reservation.noShowAt,
   };
 }
 

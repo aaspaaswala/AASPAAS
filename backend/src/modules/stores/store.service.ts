@@ -63,12 +63,51 @@ function transformStore(store: any): object {
     imageUrl: store.images?.[0] || null,
     rating: store.rating ?? null,
     reviewCount: 0,
-    isOpen: true,
+    isOpen: isStoreOpen(store.openingHours),
     distanceKm: store.distanceKm ?? null,
     verificationStatus: store.isActive ? 'VERIFIED' : 'REJECTED',
     createdAt: store.createdAt,
     updatedAt: store.updatedAt,
   };
+}
+
+/**
+ * Parses openingHours string like "9:00 AM – 9:00 PM" or "9AM-9PM" and
+ * returns whether the store is currently open based on IST.
+ */
+function isStoreOpen(openingHours?: string): boolean {
+  if (!openingHours) return true; // assume open if not specified
+  try {
+    const now = new Date();
+    // Convert to IST (UTC+5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const currentMinutes = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+
+    // Normalize: "9:00 AM – 9:00 PM" or "9AM-9PM" or "9:00AM-9:00PM"
+    const normalized = openingHours.replace('–', '-').replace('—', '-');
+    const parts = normalized.split('-').map((s) => s.trim());
+    if (parts.length < 2) return true;
+
+    const parseTime = (t: string): number => {
+      const upper = t.toUpperCase().replace(/\s/g, '');
+      const isPM = upper.includes('PM');
+      const isAM = upper.includes('AM');
+      const clean = upper.replace('AM', '').replace('PM', '');
+      const [hStr, mStr] = clean.split(':');
+      let h = parseInt(hStr, 10);
+      const m = mStr ? parseInt(mStr, 10) : 0;
+      if (isPM && h !== 12) h += 12;
+      if (isAM && h === 12) h = 0;
+      return h * 60 + m;
+    };
+
+    const openMinutes = parseTime(parts[0]);
+    const closeMinutes = parseTime(parts[1]);
+    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+  } catch {
+    return true;
+  }
 }
 
 export async function getStoreProducts(storeId: string): Promise<object[]> {

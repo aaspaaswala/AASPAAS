@@ -34,6 +34,9 @@ class BusinessReservationDetailViewModel @Inject constructor(
     }
 
     fun confirm(id: String) { viewModelScope.launch { repository.confirmReservation(id).onSuccess { load(id) } } }
+    fun markReady(id: String) { viewModelScope.launch { repository.markReservationReady(id).onSuccess { load(id) } } }
+    fun reject(id: String, reason: String? = null) { viewModelScope.launch { repository.rejectReservation(id, reason).onSuccess { load(id) } } }
     fun complete(id: String) { viewModelScope.launch { repository.completeReservation(id).onSuccess { load(id) } } }
     fun cancel(id: String) { viewModelScope.launch { repository.cancelReservation(id).onSuccess { load(id) } } }
+    fun markNoShow(id: String) { viewModelScope.launch { repository.markNoShow(id).onSuccess { load(id) } } }
 }

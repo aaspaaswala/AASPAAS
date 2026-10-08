@@ -1,5 +1,35 @@
 # Aas Paas Wala — Implementation Plan
 
+## Phase One — Core Backend Foundation (Complete)
+
+Phase One delivers the working backend contract used by the customer, business,
+and admin clients:
+
+- JWT customer, retailer, and admin authentication
+- Product, store, inventory, and category APIs
+- Customer reservation creation, listing, detail, cancellation, and expiry
+- Business dashboard, product, inventory, and reservation operations
+- Role-based access control, validation, rate limiting, CORS, and error handling
+- MongoDB-backed integration tests for reservation, business, and category flows
+- Atomic reservation cancellation and expiry stock release to protect inventory
+  from duplicate releases during concurrent requests
+
+Validation baseline: backend build passes and the backend test suite passes.
+
+## Phase Two — Production Authentication (In Progress)
+
+Completed in this phase:
+
+- Email OTP request and verification for customer and business apps
+- SMTP delivery support for production email OTPs
+- Google and Facebook server-side token verification endpoints
+- Android email OTP API, repository, ViewModel, and UI wiring
+- Keyboard-safe, scrollable authentication UX in both Android apps
+- Environment documentation for SMTP and social provider configuration
+
+Remaining: native Google/Facebook Android SDK sign-in, persistent admin users,
+OpenAPI documentation, Android UI verification, and CI.
+
 ## Current Architecture
 
 ### Backend

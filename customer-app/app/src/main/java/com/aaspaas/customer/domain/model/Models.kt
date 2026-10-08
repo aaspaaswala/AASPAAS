@@ -7,6 +7,7 @@ data class User(
     val name: String,
     val mobile: String,
     val email: String?,
+    val dob: String? = null,
     val savedLocations: List<SavedLocation> = emptyList()
 )
 
@@ -108,4 +109,12 @@ data class SearchResult(
     val products: List<Product>,
     val stores: List<Store>,
     val totalCount: Int
+)
+
+data class PriceComparisonEntry(
+    val store: Store,
+    val variantId: String,
+    val price: Double,
+    val availableStock: Int,
+    val distanceKm: Double?
 )

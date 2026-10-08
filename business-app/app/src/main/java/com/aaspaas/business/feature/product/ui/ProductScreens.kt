@@ -18,13 +18,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.aaspaas.business.core.ui.components.ErrorScreen
-import com.aaspaas.business.core.ui.components.LoadingScreen
+import com.aaspaas.business.core.ui.components.BrandButton
+import com.aaspaas.business.core.ui.components.BusinessSearchBar
+import com.aaspaas.business.core.ui.components.EmptyState
+import com.aaspaas.business.core.ui.components.ErrorState
+import com.aaspaas.business.core.ui.components.LoadingState
+import com.aaspaas.business.core.ui.components.ProductCard
 import com.aaspaas.business.core.ui.components.ProductCardShimmer
-import com.aaspaas.business.core.ui.components.SectionHeader
-import com.aaspaas.business.core.ui.components.ShimmerItem
 import com.aaspaas.business.core.ui.theme.*
-import com.aaspaas.business.domain.model.Product
 import com.aaspaas.business.feature.product.viewmodel.AddEditProductViewModel
 import com.aaspaas.business.feature.product.viewmodel.ProductListViewModel
 
@@ -36,6 +37,14 @@ fun ProductListScreen(
     viewModel: ProductListViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredProducts = remember(state.products, searchQuery) {
+        state.products.filter { product ->
+            product.name.contains(searchQuery, ignoreCase = true) ||
+                product.category.contains(searchQuery, ignoreCase = true) ||
+                product.brand.orEmpty().contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -58,81 +67,55 @@ fun ProductListScreen(
             state.isLoading -> LazyColumn(
                 Modifier.padding(padding),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item { LoadingState("Loading products") }
                 items(5) { ProductCardShimmer() }
             }
-            state.error != null -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.loadProducts() }) { Text("Retry") }
-                }
+            state.error != null -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                ErrorState(state.error ?: "Unable to load products", onRetry = viewModel::loadProducts)
             }
-            state.products.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Inventory2, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(16.dp))
-                    Text("No products yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onAddClick, colors = ButtonDefaults.buttonColors(containerColor = BusinessAccent)) {
-                        Text("Add Your First Product")
-                    }
-                }
+            state.products.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                EmptyState(
+                    title = "No products yet",
+                    description = "Add your first product to start building your catalog.",
+                    icon = Icons.Default.Inventory2,
+                    actionLabel = "Add product",
+                    onAction = onAddClick
+                )
             }
             else -> LazyColumn(
                 Modifier.padding(padding),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(state.products) { product ->
-                    BusinessProductCard(
+                item {
+                    BusinessSearchBar(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = "Search products"
+                    )
+                }
+                if (filteredProducts.isEmpty()) {
+                    item {
+                        EmptyState(
+                            title = "No matching products",
+                            description = "Try another product name, category, or brand.",
+                            icon = Icons.Default.Search
+                        )
+                    }
+                }
+                items(filteredProducts) { product ->
+                    ProductCard(
                         product = product,
                         onEdit = { onEditClick(product.id) },
                         onDelete = { viewModel.deleteProduct(product.id) }
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BusinessProductCard(product: Product, onEdit: () -> Unit, onDelete: () -> Unit) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Product") },
-            text = { Text("Delete \"${product.name}\"? This cannot be undone.") },
-            confirmButton = { TextButton(onClick = { onDelete(); showDeleteDialog = false }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
-        )
-    }
-
-    Card(shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(product.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                product.brand?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                Text(product.category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val totalStock = product.variants.sumOf { it.inventory.availableStock }
-                Text(
-                    text = "Stock: $totalStock",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = when {
-                        totalStock == 0 -> OutOfStock
-                        totalStock <= 3 -> LowStock
-                        else -> Available
-                    }
-                )
-            }
-            val minPrice = product.variants.minOfOrNull { it.price }
-            minPrice?.let { Text("₹${it.toInt()}", style = MaterialTheme.typography.titleMedium, color = BusinessAccent) }
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, tint = BusinessBrand) }
-            IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -177,63 +160,77 @@ fun AddEditProductScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("Product Info", style = MaterialTheme.typography.titleMedium, color = BusinessBrand)
-
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Product Name *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-            OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Brand") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-            OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), minLines = 2, maxLines = 4)
-
-            HorizontalDivider()
-            Text("Variant & Inventory", style = MaterialTheme.typography.titleMedium, color = BusinessBrand)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = size, onValueChange = { size = it }, label = { Text("Size") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), singleLine = true)
-                OutlinedTextField(value = color, onValueChange = { color = it }, label = { Text("Color") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), singleLine = true)
+        when {
+            productId != null && state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                LoadingState("Loading product")
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = price, onValueChange = { price = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Price (₹) *") }, modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp), singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    prefix = { Text("₹") }
-                )
-                OutlinedTextField(
-                    value = stock, onValueChange = { stock = it.filter { c -> c.isDigit() } },
-                    label = { Text("Stock *") }, modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp), singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
+            productId != null && state.error != null && state.product == null -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                ErrorState(state.error ?: "Unable to load product", onRetry = { viewModel.loadProduct(productId) })
             }
-
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    viewModel.saveProduct(
-                        productId = productId, name = name, brand = brand, description = description,
-                        category = category, size = size, color = color,
-                        price = price.toDoubleOrNull() ?: 0.0,
-                        stock = stock.toIntOrNull() ?: 0
-                    )
-                },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = name.isNotBlank() && category.isNotBlank() && price.isNotBlank() && stock.isNotBlank() && !state.isLoading,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BusinessAccent)
+            else -> Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (state.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                else Text(if (productId == null) "Add Product" else "Save Changes", style = MaterialTheme.typography.labelLarge)
+                Text("Product Info", style = MaterialTheme.typography.headlineSmall, color = BusinessBrand)
+                Surface(
+                    modifier = Modifier.fillMaxWidth().height(136.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = SurfaceVariant
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = BusinessBrand, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Product image", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Product Name *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Brand") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true)
+                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), minLines = 2, maxLines = 4)
+
+                HorizontalDivider()
+                Text("Variant & Inventory", style = MaterialTheme.typography.titleLarge, color = BusinessBrand)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(value = size, onValueChange = { size = it }, label = { Text("Size") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), singleLine = true)
+                    OutlinedTextField(value = color, onValueChange = { color = it }, label = { Text("Color") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), singleLine = true)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = price, onValueChange = { price = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Price (₹) *") }, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        prefix = { Text("₹") }
+                    )
+                    OutlinedTextField(
+                        value = stock, onValueChange = { stock = it.filter { c -> c.isDigit() } },
+                        label = { Text("Stock *") }, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+
+                BrandButton(
+                    text = if (productId == null) "Add Product" else "Save Changes",
+                    onClick = {
+                        viewModel.saveProduct(
+                            productId = productId, name = name, brand = brand, description = description,
+                            category = category, size = size, color = color,
+                            price = price.toDoubleOrNull() ?: 0.0,
+                            stock = stock.toIntOrNull() ?: 0
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = name.isNotBlank() && category.isNotBlank() && price.isNotBlank() && stock.isNotBlank(),
+                    isLoading = state.isLoading
+                )
             }
         }
     }

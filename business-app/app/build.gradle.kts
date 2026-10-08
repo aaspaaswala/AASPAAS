@@ -18,9 +18,6 @@ android {
     namespace = "com.aaspaas.business"
     compileSdk = 34
 
-    // Using D: drive for build directory to save space on C:
-    layout.buildDirectory.set(file("D:/gradle_builds/business-app/app"))
-
     defaultConfig {
         applicationId = "com.aaspaas.business"
         minSdk = 26
@@ -33,6 +30,7 @@ android {
 
         buildConfigField("String", "BASE_URL", "\"${localProperties["BASE_URL"] ?: "http://10.0.2.2:3000/api/v1/"}\"")
         buildConfigField("String", "MAPS_API_KEY", "\"${localProperties["MAPS_API_KEY"] ?: ""}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties["GOOGLE_WEB_CLIENT_ID"] ?: ""}\"")
         manifestPlaceholders["MAPS_API_KEY"] = localProperties["MAPS_API_KEY"] ?: ""
     }
 
@@ -40,13 +38,11 @@ android {
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
-            buildConfigField("Boolean", "USE_MOCK_AUTH", "true")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("Boolean", "USE_MOCK_AUTH", "false")
         }
     }
 
@@ -105,6 +101,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.auth)
     implementation(libs.accompanist.permissions)
 
     // Firebase — disabled until google-services.json is configured

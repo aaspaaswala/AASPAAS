@@ -49,8 +49,24 @@ export async function nearby(req: AuthRequest, res: Response, next: NextFunction
 
 export async function getById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
+    const { latitude, longitude, radius } = req.query as { latitude?: string; longitude?: string; radius?: string };
     const product = await productSearchService.getProductById(req.params.id);
     sendSuccess(res, product);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function priceComparison(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { latitude, longitude, radius } = req.query as { latitude?: string; longitude?: string; radius?: string };
+    const result = await productSearchService.getProductPriceComparison(
+      req.params.id,
+      latitude ? parseFloat(latitude) : undefined,
+      longitude ? parseFloat(longitude) : undefined,
+      radius ? parseFloat(radius) : 10
+    );
+    sendSuccess(res, result);
   } catch (err) {
     next(err);
   }

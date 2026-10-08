@@ -6,18 +6,57 @@ import com.google.gson.annotations.SerializedName
 
 data class CustomerAuthRequest(
     @SerializedName("phone") val phone: String,
-    @SerializedName("name") val name: String?
+    @SerializedName("name") val name: String?,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("dob") val dob: String? = null
 )
+
+data class PhoneOtpRequest(
+    @SerializedName("phone") val phone: String,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("dob") val dob: String? = null
+)
+
+data class PhoneOtpVerifyRequest(
+    @SerializedName("phone") val phone: String,
+    @SerializedName("otp") val otp: String,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("dob") val dob: String? = null
+)
+
+data class EmailOtpRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("dob") val dob: String? = null
+)
+
+data class EmailOtpVerifyRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("otp") val otp: String,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("dob") val dob: String? = null
+)
+
+data class SocialAuthRequest(
+    @SerializedName("provider") val provider: String,
+    @SerializedName("idToken") val idToken: String,
+    @SerializedName("name") val name: String? = null
+)
+
 data class AuthResponse(
     @SerializedName("accessToken") val accessToken: String,
     @SerializedName("refreshToken") val refreshToken: String,
     @SerializedName("user") val user: UserDto
 )
+
 data class UserDto(
     @SerializedName("_id") val id: String,
     @SerializedName("name") val name: String,
-    @SerializedName("mobile") val mobile: String,
-    @SerializedName("email") val email: String?
+    // Backend returns "phone" not "mobile"
+    @SerializedName("phone") val phone: String?,
+    @SerializedName("email") val email: String?,
+    @SerializedName("dob") val dob: String? = null
 )
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -49,7 +88,8 @@ data class ProductDto(
     @SerializedName("imageUrls") val imageUrls: List<String>,
     @SerializedName("category") val category: String,
     @SerializedName("variants") val variants: List<ProductVariantDto>,
-    @SerializedName("store") val store: StoreDto
+    // store is injected at the repository layer, not returned by product endpoint
+    @SerializedName("store") val store: StoreDto? = null
 )
 
 data class ProductVariantDto(
@@ -57,7 +97,7 @@ data class ProductVariantDto(
     @SerializedName("size") val size: String?,
     @SerializedName("color") val color: String?,
     @SerializedName("price") val price: Double,
-    @SerializedName("inventory") val inventory: InventoryDto
+    @SerializedName("inventory") val inventory: InventoryDto?
 )
 
 data class InventoryDto(
@@ -70,8 +110,12 @@ data class InventoryDto(
 
 // ── Reservation ───────────────────────────────────────────────────────────────
 
-data class CreateReservationRequest(@SerializedName("variantId") val variantId: String)
+data class CreateReservationRequest(
+    @SerializedName("variantId") val variantId: String,
+    @SerializedName("quantity") val quantity: Int = 1
+)
 
+// Backend returns flat denormalized reservation — no nested product/variant/store objects
 data class ReservationDto(
     @SerializedName("_id") val id: String,
     @SerializedName("customerName") val customerName: String,
@@ -82,30 +126,30 @@ data class ReservationDto(
     @SerializedName("variantDescription") val variantDescription: String,
     @SerializedName("storeName") val storeName: String,
     @SerializedName("storeAddress") val storeAddress: String,
-    @SerializedName("storeLocation") val storeLocation: StoreLocation?,
+    @SerializedName("storeLocation") val storeLocation: StoreLocationDto?,
     @SerializedName("storePhone") val storePhone: String?,
     @SerializedName("price") val price: Double,
     @SerializedName("quantity") val quantity: Int,
     @SerializedName("status") val status: String,
     @SerializedName("reservationCode") val reservationCode: String,
     @SerializedName("durationHours") val durationHours: Int,
+    @SerializedName("createdAt") val createdAt: String,
     @SerializedName("expiresAt") val expiresAt: String,
     @SerializedName("completedAt") val completedAt: String?,
     @SerializedName("cancelledAt") val cancelledAt: String?
 )
 
-data class StoreLocation(
+data class StoreLocationDto(
     @SerializedName("type") val type: String,
     @SerializedName("coordinates") val coordinates: List<Double>
 )
 
-data class ReservationsListResponse(
-    @SerializedName("reservations") val reservations: List<ReservationDto>,
-    @SerializedName("count") val count: Int
-)
-
-data class ReservationWrapper(
-    @SerializedName("reservation") val reservation: ReservationDto
+data class PriceComparisonDto(
+    @SerializedName("store") val store: StoreDto?,
+    @SerializedName("variantId") val variantId: String,
+    @SerializedName("price") val price: Double,
+    @SerializedName("availableStock") val availableStock: Int,
+    @SerializedName("distanceKm") val distanceKm: Double?
 )
 
 // ── Search ────────────────────────────────────────────────────────────────────

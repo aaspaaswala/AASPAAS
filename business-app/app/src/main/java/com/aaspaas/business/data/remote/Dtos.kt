@@ -12,7 +12,8 @@ data class RetailerDto(
     @SerializedName("_id") val id: String,
     @SerializedName("ownerName") val ownerName: String,
     @SerializedName("businessName") val businessName: String,
-    @SerializedName("mobile") val mobile: String,
+    // Backend returns "phone" field, mapped to mobile in domain
+    @SerializedName("phone") val mobile: String,
     @SerializedName("email") val email: String?,
     @SerializedName("verificationStatus") val verificationStatus: String
 )
@@ -23,12 +24,31 @@ data class AuthResponse(
     @SerializedName("retailer") val retailer: RetailerDto
 )
 
-data class LoginRequest(@SerializedName("mobile") val mobile: String)
+data class LoginRequest(@SerializedName("phone") val phone: String)
+
+data class PhoneOtpRequest(@SerializedName("phone") val phone: String)
+
+data class PhoneOtpVerifyRequest(
+    @SerializedName("phone") val phone: String,
+    @SerializedName("otp") val otp: String
+)
+
+data class EmailOtpRequest(@SerializedName("email") val email: String)
+
+data class EmailOtpVerifyRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("otp") val otp: String
+)
+
+data class SocialAuthRequest(
+    @SerializedName("provider") val provider: String,
+    @SerializedName("idToken") val idToken: String
+)
 
 data class RegisterBusinessRequest(
     @SerializedName("ownerName") val ownerName: String,
     @SerializedName("businessName") val businessName: String,
-    @SerializedName("mobile") val mobile: String,
+    @SerializedName("phone") val phone: String,
     @SerializedName("email") val email: String?,
     @SerializedName("category") val category: String,
     @SerializedName("address") val address: String,
@@ -83,11 +103,15 @@ data class ReservationDto(
     @SerializedName("productName") val productName: String,
     @SerializedName("variantDescription") val variantDescription: String,
     @SerializedName("price") val price: Double,
+    @SerializedName("quantity") val quantity: Int,
+    @SerializedName("reservationCode") val reservationCode: String?,
     @SerializedName("status") val status: String,
     @SerializedName("createdAt") val createdAt: String,
     @SerializedName("expiresAt") val expiresAt: String,
     @SerializedName("completedAt") val completedAt: String?,
-    @SerializedName("cancelledAt") val cancelledAt: String?
+    @SerializedName("cancelledAt") val cancelledAt: String?,
+    @SerializedName("rejectedAt") val rejectedAt: String?,
+    @SerializedName("rejectionReason") val rejectionReason: String?
 )
 
 data class DashboardStatsDto(
@@ -112,5 +136,7 @@ data class AddProductRequest(
     @SerializedName("category") val category: String,
     @SerializedName("variants") val variants: List<AddVariantRequest>
 )
+
+data class RejectReservationRequest(@SerializedName("reason") val reason: String?)
 
 data class UpdateInventoryRequest(@SerializedName("stock") val stock: Int)

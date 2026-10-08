@@ -28,6 +28,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests. Please try again later.') {
+    super(429, 'RATE_LIMITED', message);
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(resource = 'Resource') {
     super(404, 'NOT_FOUND', `${resource} not found`);

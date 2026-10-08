@@ -9,11 +9,13 @@ interface ReservationApiService {
     @POST("reservations")
     suspend fun createReservation(@Body request: CreateReservationRequest): ApiResponse<ReservationDto>
 
+    // Backend returns list directly as data field
     @GET("reservations")
-    suspend fun getMyReservations(): ApiResponse<ReservationsListResponse>
+    suspend fun getMyReservations(): ApiResponse<List<ReservationDto>>
 
+    // Backend returns single reservation directly as data field
     @GET("reservations/{id}")
-    suspend fun getReservationById(@Path("id") id: String): ApiResponse<ReservationWrapper>
+    suspend fun getReservationById(@Path("id") id: String): ApiResponse<ReservationDto>
 
     @POST("reservations/{id}/cancel")
     suspend fun cancelReservation(@Path("id") id: String): ApiResponse<Unit>
